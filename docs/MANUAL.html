@@ -1,0 +1,234 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SnagForge User Manual</title><style>body{font:16px/1.65 system-ui,sans-serif;color:#23334a;max-width:1050px;margin:40px auto;padding:0 24px}h1,h2{color:#153b56}h2{margin-top:2em;border-bottom:1px solid #d7e2eb;padding-bottom:8px}img{max-width:100%;border-radius:10px;border:1px solid #d7e2eb}table{border-collapse:collapse;width:100%;font-size:14px}td,th{border:1px solid #d7e2eb;text-align:left;padding:10px}th{background:#eef5f8}pre{background:#142238;color:#ecf4fb;padding:18px;overflow:auto;border-radius:8px}code{font-family:monospace}a{color:#087b74}@media print{body{font-size:11px;margin:0}h2{break-after:avoid}img,table{break-inside:avoid}}</style><body><h1>SnagForge user manual</h1>
+<p><strong>Version 0.1.0-alpha — 6 November 2026</strong></p>
+<p>SnagForge is a native Python/Qt capture workbench targeting Ubuntu 26.x. The editor and guided stitching are tested offscreen. The desktop capture/recording integrations are implemented but still need real GNOME/Wayland acceptance testing. Read the validation checklist before relying on it for important recordings.</p>
+<h2>1. Install and launch</h2>
+<p>Extract the project into a permanent folder. In that folder run:</p>
+<pre><code class="language-bash">chmod +x install.sh run.sh publish.sh
+./install.sh --system-deps
+./run.sh
+</code></pre>
+<p>Use your normal desktop user account. The installer asks for administrator privileges only when installing Ubuntu system dependencies. It creates <code>.venv</code>, an application launcher in <code>~/.local/bin</code>, and an Applications entry. Moving the source folder afterward breaks the launcher; rerun the installer after a move. Internet access is needed for installation, not routine capture/editing.</p>
+<p>The dependencies include Python, Qt, D-Bus, PipeWire GStreamer source, PNG/MP3/H.264/AAC encoders and a GNOME portal backend. OCR uses local Tesseract. Audio uses Ubuntu's PulseAudio compatibility interface, normally provided by PipeWire.</p>
+<h2>2. Find your way around</h2>
+<p><img alt="Real SnagForge editor with synthetic sample content" src="screenshots/01-editor.png" /></p>
+<p>The top row opens or captures an image and exports it. The second row sets recording format, audio, region selection and capture delay. The left panel holds annotation tools, editing actions, recent exports and this manual. The central canvas fits the image to the window; all drawing coordinates are converted back to original image pixels.</p>
+<p>The preview is fit-to-window, without a zoom or pan control. Very small details are easier to annotate after cropping. <strong>Stroke / text size</strong> changes original-pixel drawing size, rather than display pixels.</p>
+<h2>3. Capture a picture</h2>
+<ol>
+<li>Click <strong>New capture</strong> or press <strong>Ctrl+N</strong>.</li>
+<li>Save/discard your current image if prompted.</li>
+<li>The app hides, waits for the selected delay, then requests a desktop screenshot.</li>
+<li>Approve or use the system screenshot picker. The exact choices depend on your desktop's portal backend.</li>
+<li>SnagForge opens a preview. Drag a rectangle for an area, or click <strong>Full source</strong> for the entire returned image.</li>
+<li>Annotate and export.</li>
+</ol>
+<p><img alt="Drag selection on an actual capture-preview dialog" src="screenshots/02-region-selection.png" /></p>
+<p>Selection is performed on a captured preview, not a transparent live desktop overlay. The system picker may already offer area/window selection. If you want predictable coordinates for a scrolling sequence, always use the same system selection and the same SnagForge crop. Escape/Cancel exits the preview.</p>
+<p>The delay is measured before opening the portal picker. It gives you time to arrange menus, but does not guarantee a menu remains open through every desktop's permission dialog.</p>
+<h2>4. Open an existing picture</h2>
+<p>Use <strong>Open image</strong>, <strong>Ctrl+O</strong>, or paste an image from the clipboard with <strong>Paste / Ctrl+V</strong>. Supported import formats include PNG, JPEG, WebP and BMP. Double-click an image in Recent exports to open it. A replacement prompt protects an image that has not been exported.</p>
+<h2>5. Annotate and edit</h2>
+<p>Choose a tool in the left dropdown. Choose a color and stroke size, then drag on the canvas.</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Arrow / Line</td>
+<td>Drag from the starting point to the target.</td>
+</tr>
+<tr>
+<td>Pen</td>
+<td>Drag a freehand stroke.</td>
+</tr>
+<tr>
+<td>Rectangle / Ellipse</td>
+<td>Drag diagonally across the area to outline.</td>
+</tr>
+<tr>
+<td>Text</td>
+<td>Click or drag at the intended top-left position, then enter text.</td>
+</tr>
+<tr>
+<td>Step</td>
+<td>Click to place a numbered badge. Numbers increase during the session and reset on a new image.</td>
+</tr>
+<tr>
+<td>Highlight</td>
+<td>Drag a translucent yellow rectangle.</td>
+</tr>
+<tr>
+<td>Pixelate</td>
+<td>Drag an area to mosaic its contents.</td>
+</tr>
+<tr>
+<td>Redact</td>
+<td>Drag an area to replace it with opaque black pixels.</td>
+</tr>
+<tr>
+<td>Spotlight</td>
+<td>Drag the area to keep bright; the surrounding image becomes dim.</td>
+</tr>
+<tr>
+<td>Crop</td>
+<td>Drag to retain only the selected rectangle.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Rotate 90°</strong> rotates clockwise. <strong>Resize image</strong> asks for a width and preserves aspect ratio. Text is rasterized after you enter it; there are no movable annotation objects or editable layers in this release.</p>
+<p>Undo restores up to 20 previous image snapshots; redo restores an undone operation. New edits clear redo. Step numbering is a session counter and does not rewind when a step is undone. Large images can use substantial memory because history stores image copies.</p>
+<p>For confidential material, use <strong>Redact</strong> and inspect the exported image. Pixelation is a visual effect and may leave text inferable. Undo history remains in memory until a new image is opened or the app closes. This release does not save an editable project containing the original and redactions.</p>
+<h2>6. Capture a scrolling window</h2>
+<p><img alt="The guided scrolling dialog with two example sections" src="screenshots/03-scrolling-capture.png" /></p>
+<p>This is a guided vertical stitcher. You control scrolling and the repeated overlap.</p>
+<ol>
+<li>Open <strong>Scrolling capture</strong>.</li>
+<li>Click <strong>Capture section</strong>. The app hides so you can capture the target window.</li>
+<li>Select the content area. Exclude window borders and sticky headers if possible.</li>
+<li>Scroll the target down a known, constant distance, leaving visible overlap.</li>
+<li>Capture the next section using exactly the same width and dimensions.</li>
+<li>Repeat, or use <strong>Import sections</strong> to add existing images in top-to-bottom order.</li>
+<li>Set optional <strong>Trim header</strong> and <strong>Trim footer</strong> in original image pixels. These values are removed from every section.</li>
+<li>Set <strong>Overlap</strong> to the number of repeated rows between the trimmed sections.</li>
+<li>Click <strong>Stitch into editor</strong>, inspect seams, annotate, and export.</li>
+</ol>
+<p>For example, two sections each 800 pixels tall with 120 pixels of shared content produce a 1,480-pixel image: <code>800 + 800 − 120</code>. SnagForge retains the entire first section and drops the first 120 rows from each later section. If you trim 50 pixels from the top and 30 from the bottom, each section becomes 720 pixels tall; recompute overlap relative to that trimmed content.</p>
+<p>Use a constant scroll distance for this release. Changing overlap between sections, horizontal capture, overlap detection and automatic scrolling are not implemented. Sticky or animated content can prevent a clean stitch. Remove a bad section with <strong>Remove last</strong>. Different widths are rejected. Combined output is limited to 100 megapixels.</p>
+<h2>7. Record MP4 video</h2>
+<p><img alt="Recording format, audio and selection controls in the real idle interface" src="screenshots/04-recording-setup.png" /></p>
+<ol>
+<li>Choose <strong>MP4 video</strong>.</li>
+<li>Choose audio: <strong>None</strong>, <strong>Microphone</strong>, or <strong>System audio</strong>.</li>
+<li>Enable <strong>Select region</strong> for a cropped recording, or disable it for the full chosen source.</li>
+<li>Set an optional delay and click <strong>Record</strong>.</li>
+<li>Choose the output filename. The app minimizes and opens the desktop screen/window picker.</li>
+<li>Approve one screen or window. Multiple-source mixing is not implemented.</li>
+<li>If a region is enabled, SnagForge takes one frame from that exact source and lets you drag a region on the preview. This avoids confusing monitor coordinates on a multiple-monitor desktop.</li>
+<li>After selection, the recording starts and the app minimizes again.</li>
+<li>Restore SnagForge and press <strong>Stop &amp; save</strong>. Keep the app open while it sends end-of-stream to finalize MP4 metadata.</li>
+<li>Open the saved file from Recent exports or the capture folder.</li>
+</ol>
+<p>The pipeline targets 30 fps and encodes H.264 video plus optional AAC audio. H.264 cropped dimensions are rounded down to even pixel counts; at most one pixel is removed from the right and bottom. Region selection uses the preview before recording, rather than a live overlay. Desktop capture can include the mouse cursor; no click ripple or cursor highlighting is added.</p>
+<p>There is no pause, webcam overlay, recording tray button or built-in video trimming yet. Restoring SnagForge can appear in a monitor recording; choose a separate window for a cleaner output. If a source disappears or the portal session ends, recording may fail or require you to stop it. An error may leave a partial file. Check playback after every important recording.</p>
+<h2>8. Record MP3 audio</h2>
+<p>MP3 is audio-only. Select <strong>MP3 audio</strong>, then choose <strong>Microphone</strong> or <strong>System audio</strong>, click <strong>Record</strong>, choose a file, and later press <strong>Stop &amp; save</strong>. No screen picker is needed. Encoding targets 192 kbps MP3.</p>
+<p><strong>Microphone</strong> uses the default audio input; verify it in Ubuntu Sound settings. <strong>System audio</strong> records the monitor of the default output sink resolved at recording startup. Switching your output device during a session does not follow the new device. Audio monitoring/levels and simultaneous microphone plus system audio mixing are not implemented.</p>
+<h2>9. Export and find files</h2>
+<p><strong>Export image / Ctrl+S</strong> writes flattened PNG, JPEG or WebP. PNG is a good choice for screenshots and text. JPEG is lossy and removes transparency. Copy the image with <strong>Copy image / Ctrl+C</strong> for pasting elsewhere.</p>
+<p>By default exports go into <code>~/Pictures/SnagForge</code>. You can choose another folder, but the Recent exports list only scans that default folder. It shows the last 80 matching files by modification date and is refreshed on startup and after exports. Double-click audio/video to open the system player. SnagForge does not upload captures or provide cloud links.</p>
+<h2>10. Extract text with OCR</h2>
+<p>Open an image and press <strong>Extract text (OCR)</strong>. Tesseract runs locally with its default recognition language and returns text in a review dialog. Edit it if needed and click OK to copy it to the clipboard. Cancel leaves the clipboard unchanged. OCR accuracy depends on resolution, font and language. This is text extraction, not in-place screenshot text editing. Large images may leave the UI busy while OCR runs, for up to its 40-second timeout.</p>
+<h2>11. Keyboard shortcuts</h2>
+<table>
+<thead>
+<tr>
+<th>Shortcut</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ctrl+N</td>
+<td>New screenshot</td>
+</tr>
+<tr>
+<td>Ctrl+O</td>
+<td>Open image</td>
+</tr>
+<tr>
+<td>Ctrl+S</td>
+<td>Export image</td>
+</tr>
+<tr>
+<td>Ctrl+C</td>
+<td>Copy image</td>
+</tr>
+<tr>
+<td>Ctrl+V</td>
+<td>Paste image</td>
+</tr>
+<tr>
+<td>Ctrl+Z</td>
+<td>Undo</td>
+</tr>
+<tr>
+<td>Ctrl+Shift+Z</td>
+<td>Redo</td>
+</tr>
+</tbody>
+</table>
+<p>These are active while SnagForge has keyboard focus. To launch the app from anywhere, you can configure a custom shortcut for <code>~/.local/bin/snagforge</code> in Ubuntu Settings → Keyboard. This opens the application; it is not a dedicated capture-only hotkey or an implemented global portal shortcut.</p>
+<h2>12. Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Portal service/interface missing</td>
+<td>Confirm a desktop session is running and the GNOME Screenshot/ScreenCast portal backend is installed. Do not run as root or in a headless SSH session.</td>
+</tr>
+<tr>
+<td>Picker cancelled / no image</td>
+<td>Try again and approve/select a source; cancellation creates no new image.</td>
+</tr>
+<tr>
+<td>Black/no video preview</td>
+<td>Source/backend may not provide frames. Try recording full source without region preview; check PipeWire and the portal backend.</td>
+</tr>
+<tr>
+<td><code>gst-launch-1.0</code> missing</td>
+<td>Rerun <code>./install.sh --system-deps</code>.</td>
+</tr>
+<tr>
+<td>Encoder or <code>pipewiresrc</code> missing</td>
+<td>Check <code>gst-inspect-1.0 x264enc</code>, <code>pipewiresrc</code>, <code>avenc_aac</code>, <code>lamemp3enc</code>; install the listed Ubuntu packages.</td>
+</tr>
+<tr>
+<td>No system audio</td>
+<td>Confirm <code>pactl get-default-sink</code> returns the speaker/headset where audio plays.</td>
+</tr>
+<tr>
+<td>No microphone audio</td>
+<td>Set your microphone as the default input in Ubuntu Sound settings.</td>
+</tr>
+<tr>
+<td>MP4 will not play</td>
+<td>Stop with <strong>Stop &amp; save</strong>, allow finalization, then check whether an encoder error or interrupted session left a partial file.</td>
+</tr>
+<tr>
+<td>Stitch has duplicates/gaps</td>
+<td>Correct overlap after trim, use the same area and a constant scroll distance, and inspect each seam.</td>
+</tr>
+<tr>
+<td>Text OCR incorrect</td>
+<td>Use a sharper source and the right installed Tesseract language; this release uses its default language configuration.</td>
+</tr>
+<tr>
+<td>Launcher stopped working</td>
+<td>The project folder may have moved. Rerun <code>./install.sh</code> from its permanent location.</td>
+</tr>
+</tbody>
+</table>
+<p>Useful local checks:</p>
+<pre><code class="language-bash">systemctl --user status xdg-desktop-portal pipewire
+journalctl --user -u xdg-desktop-portal --since '10 minutes ago'
+gst-inspect-1.0 pipewiresrc
+gst-inspect-1.0 x264enc
+gst-inspect-1.0 avenc_aac
+pactl get-default-source
+pactl get-default-sink
+</code></pre>
+<p>Avoid posting screenshots or logs containing private content in public bug reports. Include the Ubuntu version, session type (<code>echo "$XDG_SESSION_TYPE"</code>), app version, reproduction steps, and a sanitized error message.</p>
+<h2>13. Remove SnagForge</h2>
+<p>Close the app and remove <code>~/.local/bin/snagforge</code> and <code>~/.local/share/applications/snagforge.desktop</code>. Delete the project folder only when you no longer need its source and virtual environment. Captures in <code>~/Pictures/SnagForge</code> are separate and remain until you delete them yourself. The installer does not provide a package-managed uninstall or remove shared Ubuntu dependencies.</p>
+<h2>14. Scope and project status</h2>
+<p>SnagForge is an independent open-source alpha. It does not implement Snagit's proprietary AI features, file format, cloud services, automatic process recording or complete editing suite. See <a href="FEATURES.md">FEATURES.md</a> for an explicit roadmap and <a href="VALIDATION.md">VALIDATION.md</a> for the acceptance checklist.</p>
+<p>All images in this manual are screenshots of actual SnagForge Qt widgets rendered offscreen with synthetic example content. They demonstrate the implemented UI and do not establish that live Ubuntu screen/audio capture has passed testing.</p></body></html>
