@@ -4,6 +4,7 @@ project_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 if [[ "${1:-}" == "--system-deps" ]]; then
   sudo apt-get update
   sudo apt-get install -y python3-venv python3-pip libxcb-cursor0 libegl1 libopengl0 \
+    libnss3 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2t64 \
     xdg-desktop-portal xdg-desktop-portal-gnome \
     gstreamer1.0-tools gstreamer1.0-pipewire gstreamer1.0-plugins-base \
     gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly \

@@ -4,11 +4,11 @@
 
 An independent, GPL-3.0-licensed screenshot and recording workbench built for Ubuntu desktops. Inspired by common screen capture workflows; not affiliated with TechSmith and not compatible with Snagit project files.
 
-**Version 0.1.0-alpha · Target: Ubuntu 26.x GNOME / Wayland · Python 3.10+**
+**Version 0.2.0-alpha · Target: Ubuntu 26.x GNOME / Wayland · Python 3.10+ · Angular 22**
 
 > This is an early source release, not full Snagit feature parity. Editor, stitching, selection mapping and portal protocol behavior have automated tests. Live capture, audio and encoding still require validation on a real Ubuntu 26 desktop. There are no fabricated recording screenshots or claimed live recording results.
 
-![Actual SnagForge editor, rendered with synthetic demonstration data](docs/screenshots/01-editor.png)
+![Actual SnagForge editor, rendered with synthetic demonstration data](docs/screenshots/05-angular-editor.png)
 
 ## Install on Ubuntu
 
@@ -24,6 +24,12 @@ The first command installs Ubuntu packages with `sudo`, creates a project-local 
 
 Install dependencies only on the Ubuntu computer where you want to run the app. Do not run the GUI as root. No Docker, web server or account is needed to use it.
 
+## What changed in 0.2
+
+A new offline Angular desktop interface provides a focused image editor, recording setup, searchable recent-export library and local after-capture workflows. The native Python / PipeWire / GStreamer engine handles desktop operations through Qt WebChannel. Node.js is needed only to rebuild the interface; the prebuilt UI is included.
+
+New tools include pinned image reference windows and three local screenshot workflows: annotate first, quick copy, and save & copy.
+
 ## Features in this source release
 
 | Capability | Status / behavior |
@@ -38,8 +44,10 @@ Install dependencies only on the Ubuntu computer where you want to run the app. 
 | History | Undo/redo up to 20 raster snapshots in memory |
 | Export | Flattened PNG, JPEG, WebP; image clipboard copy and paste |
 | OCR | Local Tesseract text extraction, review/copy; no in-place text editing |
-| Recent exports | Last 80 image/audio/video exports in `~/Pictures/SnagForge`, newest first |
+| Recent exports | Searchable last 80 image/audio/video exports in `~/Pictures/SnagForge`, newest first |
 | Delay | 0–30 seconds before opening the capture flow |
+| Reference windows | Pin a copy of the current image; topmost behavior depends on the compositor |
+| After-capture workflows | Annotate first, quick copy, or save & copy; presets stay local |
 | Help | Illustrated manual in Markdown and offline HTML, opened from the app |
 
 ![Actual region-selection dialog](docs/screenshots/02-region-selection.png)
@@ -74,6 +82,17 @@ This release does not automatically scroll, detect overlap or remove repeated st
 
 ## Development
 
+The primary UI is in `frontend/src/`, built with Angular 22 and TypeScript. `web_shell.py` hosts the prebuilt UI and provides the native bridge. `ui.py` supports the alternative native Qt editor. Use `.venv/bin/python app.py --native` for that interface.
+
+To rebuild the frontend with Node.js 24 LTS:
+
+```bash
+cd frontend
+npm ci
+npm run build
+```
+
+
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
@@ -82,7 +101,7 @@ QT_QPA_PLATFORM=offscreen .venv/bin/python docs/render_screenshots.py
 .venv/bin/python app.py
 ```
 
-Application modules: `app.py` (UI), `editor.py` (raster editor), `portal.py` (D-Bus desktop requests), `workers.py` (capture/recording lifecycle), `media.py` (pipelines/stitching). Tests use synthetic images and a fake D-Bus transport; they do not record the developer's desktop.
+Application modules: `app.py` (native editor and launch selection), `editor.py` (raster editor), `portal.py` (D-Bus desktop requests), `workers.py` (capture/recording lifecycle), `media.py` (pipelines/stitching). Tests use synthetic images and a fake D-Bus transport; they do not record the developer's desktop.
 
 Capture uses the system [Screenshot](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.Screenshot.html) and [ScreenCast](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.ScreenCast.html) portals. Media encoding uses [GStreamer](https://gstreamer.freedesktop.org/documentation/tools/gst-launch.html). UI rendering uses [Qt for Python](https://doc.qt.io/qtforpython-6/). The app executes local capture/encoder processes, not shell-interpolated media commands. Capture workers use separate threads.
 
@@ -103,3 +122,7 @@ The repository contains the application, illustrated manual, screenshots, tests 
 ## Licensing
 
 This repository uses GPL-3.0, as selected when the repository was created. The original alpha's MIT copyright and permission notice is retained in LICENSE-MIT. Dependencies retain their own licenses: PySide6/Qt include LGPL/GPL/commercial terms, dbus-next is MIT, Pillow has its own permissive license, and GStreamer components/codecs have their own terms. This is source distribution; review dependency and codec obligations before redistributing a bundled binary. Snagit names are used only for comparison, without copied branding or assets.
+
+## Checks
+
+Twelve Python tests pass. The actual Angular desktop window was exercised with synthetic images: startup, native bridge synchronization, rectangle annotation, native clipboard copy, undo/redo, and three rendered UI screenshots. Live Ubuntu 26 screen/audio recording remains unverified. See [validation](docs/VALIDATION.md) and the [Snagit + ShareX hybrid roadmap](docs/HYBRID_ROADMAP.md).

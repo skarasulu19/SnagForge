@@ -13,10 +13,11 @@ from PySide6.QtGui import QAction, QColor, QDesktopServices, QImage, QTransform
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QComboBox, QSpinBox, QCheckBox, QToolBar, QColorDialog,
     QFileDialog, QMessageBox, QDialog, QDialogButtonBox, QInputDialog, QListWidget,
-    QSplitter, QAbstractItemView)
+    QSplitter, QAbstractItemView, QFrame, QToolButton, QButtonGroup, QGridLayout)
 from editor import Canvas, RegionDialog
 from workers import CaptureWorker, Recorder
 from media import stitch
+from ui import STYLE, icon, action_button, caption, field, ReferenceWindow
 
 CAPTURES=Path.home()/'Pictures'/'SnagForge'
 
@@ -93,59 +94,137 @@ class ScrollDialog(QDialog):
 class Window(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('SnagForge · Capture. Annotate. Explain.');self.resize(1360,860)
+        self.setWindowTitle('SnagForge · Capture studio');self.resize(1520,940)
+        self.setMinimumSize(1250,790)
         self.recorder=None;self.capture_worker=None;self.busy=False;self.dirty=False
-        self.recording_since=None
-        root=QWidget();self.setCentralWidget(root);layout=QVBoxLayout(root)
-        header=QHBoxLayout();layout.addLayout(header)
-        brand=QLabel('SNAGFORGE');brand.setObjectName('brand');header.addWidget(brand)
-        tag=QLabel('CAPTURE. ANNOTATE. EXPLAIN.');tag.setObjectName('muted');header.addWidget(tag)
-        header.addStretch();self.capture_btn=button('＋ New capture',self.capture,header)
-        button('Open image',self.open_image,header);button('Paste',self.paste,header)
-        button('Export image',self.save,header)
-        controls=QHBoxLayout();layout.addLayout(controls)
-        self.mode=QComboBox();self.mode.addItems(['MP4 video','MP3 audio']);controls.addWidget(self.mode)
-        self.audio=QComboBox();self.audio.addItems(['None','Microphone','System audio']);controls.addWidget(self.audio)
+        self.recording_since=None;self.pins=[]
+        root=QWidget();self.setCentralWidget(root)
+        shell=QHBoxLayout(root);shell.setContentsMargins(0,0,0,0);shell.setSpacing(0)
+        sidebar=QWidget();sidebar.setObjectName('sidebar');sidebar.setFixedWidth(222)
+        shell.addWidget(sidebar)
+        side=QVBoxLayout(sidebar);side.setContentsMargins(20,26,18,18);side.setSpacing(9)
+        brandrow=QHBoxLayout();brandrow.setSpacing(10)
+        logo=QLabel();logo.setObjectName('logo');logo.setPixmap(icon('capture','#ffffff',23).pixmap(23,23));brandrow.addWidget(logo)
+        brandcol=QVBoxLayout();brandcol.setSpacing(3)
+        brand=QLabel('SnagForge');brand.setObjectName('brand');brandcol.addWidget(brand)
+        sub=QLabel('CAPTURE. CREATE. SHARE.');sub.setObjectName('sideSub');brandcol.addWidget(sub)
+        brandrow.addLayout(brandcol);side.addLayout(brandrow);side.addSpacing(28)
+        label=QLabel('WORKSPACE');label.setObjectName('sideCaption');side.addWidget(label);side.addSpacing(3)
+        side.addWidget(action_button('  Image editor','image',lambda:self.canvas.setFocus(),'activeNav','#b6a6ff'))
+        side.addWidget(action_button('  Screen recorder','video',self.focus_recording,'nav','#8190ac'))
+        side.addWidget(action_button('  Scrolling capture','scroll',self.scrolling,'nav','#8190ac'))
+        side.addWidget(action_button('  Capture folder','folder',self.open_folder,'nav','#8190ac'))
+        side.addSpacing(26)
+        recentrow=QHBoxLayout();label=QLabel('RECENT EXPORTS');label.setObjectName('sideCaption');recentrow.addWidget(label);recentrow.addStretch()
+        self.recent_count=QLabel('0');self.recent_count.setObjectName('sideSub');recentrow.addWidget(self.recent_count);side.addLayout(recentrow)
+        self.recent=QListWidget();self.recent.setWordWrap(True);self.recent.itemDoubleClicked.connect(self.open_recent)
+        side.addWidget(self.recent,1)
+        self.recent_empty=QLabel('Your exported captures\nwill appear here.');self.recent_empty.setObjectName('sideSub');side.addWidget(self.recent_empty)
+        side.addSpacing(14)
+        privacy=QLabel('●  Local by default');privacy.setStyleSheet('color:#73c5ac;font-size:11px;padding:10px 0;');side.addWidget(privacy)
+        side.addWidget(action_button('  Help & user manual','help',self.manual,'sideQuiet','#8292ae'))
+        foot=QHBoxLayout();version=QLabel('v0.2.0');version.setObjectName('sideSub');foot.addWidget(version)
+        alpha=QLabel('ALPHA');alpha.setObjectName('alpha');foot.addWidget(alpha);foot.addStretch();side.addLayout(foot)
+
+        workspace=QWidget();shell.addWidget(workspace,1)
+        layout=QVBoxLayout(workspace);layout.setContentsMargins(28,25,28,6);layout.setSpacing(18)
+        top=QHBoxLayout();titles=QVBoxLayout();titles.setSpacing(5)
+        title=QLabel('Capture studio');title.setObjectName('title');titles.addWidget(title)
+        subtitle=QLabel('A little clarity goes a long way.');subtitle.setObjectName('subtitle');titles.addWidget(subtitle);top.addLayout(titles);top.addStretch()
+        self.capture_btn=action_button('New capture','capture',self.capture,'primary','#ffffff');top.addWidget(self.capture_btn)
+        top.addWidget(action_button('Export image','export',self.save,'export','#ffffff'));layout.addLayout(top)
+
+        editorrow=QHBoxLayout();editorrow.setSpacing(16);layout.addLayout(editorrow,1)
+        card=QFrame();card.setObjectName('editorCard');editorrow.addWidget(card,1)
+        cardlayout=QVBoxLayout(card);cardlayout.setContentsMargins(0,0,0,0);cardlayout.setSpacing(0)
+        imagehead=QFrame();imagehead.setObjectName('imageHeader');ih=QHBoxLayout(imagehead);ih.setContentsMargins(16,14,16,12)
+        nameicon=QLabel();nameicon.setPixmap(icon('image','#8e83bd',17).pixmap(17,17));ih.addWidget(nameicon)
+        self.image_title=QLabel('Untitled capture');self.image_title.setObjectName('filename');ih.addWidget(self.image_title);ih.addStretch()
+        chip=QLabel('LOCAL WORKSPACE');chip.setObjectName('chip');ih.addWidget(chip);cardlayout.addWidget(imagehead)
+        toolbar=QFrame();toolbar.setObjectName('toolbar');tools=QHBoxLayout(toolbar);tools.setContentsMargins(10,4,10,10);tools.setSpacing(3)
+        self.tool=QComboBox();names=['Arrow','Pen','Line','Rectangle','Ellipse','Text','Step','Highlight','Pixelate','Redact','Spotlight','Crop'];self.tool.addItems(names);self.tool.hide()
+        self.tool_group=QButtonGroup(self);self.tool_buttons={}
+        for name in names:
+            control=QToolButton();control.setIcon(icon(name));control.setCheckable(True)
+            control.setToolTip(name);control.setAccessibleName(name);control.setFixedSize(34,35)
+            control.setCursor(Qt.CursorShape.PointingHandCursor)
+            control.clicked.connect(lambda checked=False,n=name:self.tool.setCurrentText(n))
+            self.tool_group.addButton(control);self.tool_buttons[name]=control;tools.addWidget(control)
+        self.tool_buttons['Arrow'].setChecked(True);tools.addStretch()
+        for text,name,fn in [('Undo','undo',lambda:self.canvas.undo()),('Redo','redo',lambda:self.canvas.redo())]:
+            control=QToolButton();control.setIcon(icon(name));control.setToolTip(text);control.setAccessibleName(text);control.clicked.connect(fn);tools.addWidget(control)
+        cardlayout.addWidget(toolbar)
+        self.canvas=Canvas();cardlayout.addWidget(self.canvas,1)
+        canvasfoot=QHBoxLayout();canvasfoot.setContentsMargins(16,9,16,11)
+        self.image_info=QLabel('No image loaded');self.image_info.setObjectName('canvasInfo');canvasfoot.addWidget(self.image_info);canvasfoot.addStretch()
+        fit=QLabel('Fit to workspace');fit.setObjectName('canvasInfo');canvasfoot.addWidget(fit);cardlayout.addLayout(canvasfoot)
+
+        inspector=QFrame();inspector.setObjectName('inspector');inspector.setFixedWidth(204);editorrow.addWidget(inspector)
+        props=QVBoxLayout(inspector);props.setContentsMargins(17,18,17,16);props.setSpacing(12)
+        label=QLabel('Tool properties');label.setObjectName('sectionTitle');props.addWidget(label)
+        self.active_tool=QLabel('ARROW');self.active_tool.setObjectName('caption');props.addWidget(self.active_tool);props.addSpacing(8)
+        props.addWidget(caption('COLOR'))
+        swatches=QHBoxLayout();swatches.setSpacing(5);self.color_buttons=[]
+        for color in ['#7561ee','#ff7759','#38b997','#f4b846','#26334a']:
+            control=QPushButton();control.setObjectName('swatch');control.setFixedSize(25,25)
+            control.setToolTip(color);control.setAccessibleName('Color '+color)
+            control.setStyleSheet('background:'+color+';');control.clicked.connect(lambda checked=False,c=color:self.set_color(QColor(c)))
+            swatches.addWidget(control);self.color_buttons.append(control)
+        props.addLayout(swatches)
+        self.color_btn=action_button('Custom color','image',self.pick_color,'quiet');props.addWidget(self.color_btn)
+        self.stroke=QSpinBox();self.stroke.setRange(1,30);self.stroke.setValue(5);self.stroke.setSuffix(' px')
+        props.addWidget(field('STROKE / TEXT SIZE',self.stroke));props.addSpacing(16)
+        label=QLabel('Quick actions');label.setObjectName('sectionTitle');props.addWidget(label)
+        for text,name,fn in [('Copy image','copy',self.copy),('Pin reference','pin',self.pin_image),('Rotate 90°','rotate',self.rotate),('Resize image','resize',self.resize_image),('Extract text','ocr',self.ocr)]:
+            control=action_button(text,name,fn,'quiet');control.setStyleSheet('text-align:left;');props.addWidget(control)
+        props.addStretch()
+        tips=QLabel('GOOD TO KNOW\n\nDrag on the image to annotate.\nCtrl+Z brings you back.');tips.setWordWrap(True);tips.setStyleSheet('color:#9aa5b5;font-size:10px;line-height:1.5;');props.addWidget(tips)
+
+        recordcard=QFrame();recordcard.setObjectName('recordCard');self.record_card=recordcard
+        rl=QVBoxLayout(recordcard);rl.setContentsMargins(18,15,18,16);rl.setSpacing(13)
+        rh=QHBoxLayout();recordicon=QLabel();recordicon.setPixmap(icon('video','#8a7de0',18).pixmap(18,18));rh.addWidget(recordicon)
+        label=QLabel('Screen & audio recording');label.setObjectName('sectionTitle');rh.addWidget(label);rh.addStretch()
+        self.record_badge=QLabel('READY');self.record_badge.setObjectName('caption');rh.addWidget(self.record_badge);rl.addLayout(rh)
+        controls=QHBoxLayout();controls.setSpacing(14)
+        self.mode=QComboBox();self.mode.addItems(['MP4 video','MP3 audio']);self.mode.setMinimumWidth(130);controls.addWidget(field('FORMAT',self.mode),1)
+        self.audio=QComboBox();self.audio.addItems(['None','Microphone','System audio']);self.audio.setMinimumWidth(140);controls.addWidget(field('AUDIO SOURCE',self.audio),1)
+        self.delay=QSpinBox();self.delay.setRange(0,30);self.delay.setSuffix(' sec');controls.addWidget(field('START DELAY',self.delay))
         self.region=QCheckBox('Select region');self.region.setChecked(True);controls.addWidget(self.region)
-        controls.addWidget(QLabel('Delay (s)'));self.delay=QSpinBox();self.delay.setRange(0,30);controls.addWidget(self.delay)
-        self.record_btn=button('● Record',self.record,controls)
-        self.stop_btn=button('■ Stop & save',self.stop,controls);self.stop_btn.setEnabled(False)
-        controls.addStretch();button('Scrolling capture',self.scrolling,controls)
-        splitter=QSplitter();layout.addWidget(splitter,1)
-        sidebar=QWidget();side=QVBoxLayout(sidebar);side.setContentsMargins(0,8,8,0)
-        side.addWidget(QLabel('ANNOTATE'))
-        self.tool=QComboBox();self.tool.addItems(['Arrow','Pen','Line','Rectangle','Ellipse','Text','Step','Highlight','Pixelate','Redact','Spotlight','Crop'])
-        side.addWidget(self.tool)
-        button('Annotation color',self.pick_color,side)
-        side.addWidget(QLabel('Stroke / text size'))
-        self.stroke=QSpinBox();self.stroke.setRange(1,30);self.stroke.setValue(5);side.addWidget(self.stroke)
-        button('Undo · Ctrl+Z',lambda:self.canvas.undo(),side)
-        button('Redo · Ctrl+Shift+Z',lambda:self.canvas.redo(),side)
-        button('Copy image',self.copy,side)
-        button('Rotate 90°',self.rotate,side)
-        button('Resize image',self.resize_image,side)
-        button('Extract text (OCR)',self.ocr,side)
-        side.addSpacing(16);side.addWidget(QLabel('RECENT EXPORTS'))
-        self.recent=QListWidget();self.recent.itemDoubleClicked.connect(self.open_recent);side.addWidget(self.recent,1)
-        button('Open captures folder',self.open_folder,side)
-        button('User manual',self.manual,side)
-        sidebar.setMinimumWidth(220);sidebar.setMaximumWidth(280)
-        self.canvas=Canvas();splitter.addWidget(sidebar);splitter.addWidget(self.canvas);splitter.setStretchFactor(1,1)
-        self.tool.currentTextChanged.connect(lambda t:setattr(self.canvas,'tool',t))
+        self.record_btn=action_button('Record','record',self.record,'primary','#ffffff');controls.addWidget(self.record_btn)
+        self.stop_btn=action_button('Stop & save','stop',self.stop);self.stop_btn.setEnabled(False);controls.addWidget(self.stop_btn)
+        rl.addLayout(controls);layout.addWidget(recordcard)
+        bottom=QHBoxLayout();bottom.setSpacing(8)
+        bottom.addWidget(action_button('Open image','image',self.open_image,'quiet'));bottom.addWidget(action_button('Paste image','paste',self.paste,'quiet'));bottom.addStretch()
+        notice=QLabel('Ubuntu / Wayland  ·  Desktop recording validation pending');notice.setObjectName('canvasInfo');bottom.addWidget(notice);layout.addLayout(bottom)
+        self.tool.currentTextChanged.connect(self.select_tool)
         self.stroke.valueChanged.connect(lambda n:setattr(self.canvas,'stroke_width',n))
-        self.canvas.changed.connect(self.changed)
-        self.statusBar().showMessage('Ready · Local files · Ubuntu / Wayland capture via desktop portals')
+        self.canvas.changed.connect(self.changed);self.set_color(QColor('#7561ee'))
+        self.statusBar().showMessage('Ready to capture something worth explaining.')
         self.timer=QTimer(self);self.timer.timeout.connect(self.tick);self.timer.start(1000)
         for key,fn in [('Ctrl+O',self.open_image),('Ctrl+S',self.save),('Ctrl+C',self.copy),('Ctrl+V',self.paste),('Ctrl+Z',self.canvas.undo),('Ctrl+Shift+Z',self.canvas.redo),('Ctrl+N',self.capture)]:
             action=QAction(self);action.setShortcut(key);action.triggered.connect(fn);self.addAction(action)
         self.refresh_recent()
+
+    def select_tool(self,name):
+        self.canvas.tool=name;self.active_tool.setText(name.upper());self.tool_buttons[name].setChecked(True)
+    def set_color(self,color):
+        self.canvas.color=color;self.color_btn.setText(color.name().upper())
+    def focus_recording(self):
+        self.mode.setFocus();self.statusBar().showMessage('Choose a format and audio source, then press Record.')
+    def pin_image(self):
+        if self.canvas.image.isNull():return
+        pin=ReferenceWindow(self.canvas.image,self);self.pins.append(pin)
+        pin.finished.connect(lambda result,p=pin:self.pins.remove(p) if p in self.pins else None)
+        pin.show()
 
     def error(self,message):
         QMessageBox.warning(self,'SnagForge',message)
     def changed(self):
         self.dirty=True
         im=self.canvas.image
-        self.statusBar().showMessage(f'{im.width():,} × {im.height():,} px · {self.tool.currentText()} · Drag to annotate')
+        self.image_info.setText(f'{im.width():,} × {im.height():,} px  ·  Unsaved changes')
+        self.image_title.setText('Untitled capture')
+        self.statusBar().showMessage(f'{self.tool.currentText()} · Drag on your image to annotate')
     def can_replace(self):
         if not self.dirty:return True
         answer=QMessageBox.question(self,'Unsaved image','Export the current image before replacing it?',
@@ -168,7 +247,7 @@ class Window(QMainWindow):
             QApplication.clipboard().setImage(self.canvas.image);self.statusBar().showMessage('Image copied to clipboard')
     def pick_color(self):
         color=QColorDialog.getColor(self.canvas.color,self)
-        if color.isValid():self.canvas.color=color
+        if color.isValid():self.set_color(color)
     def rotate(self):
         if not self.canvas.image.isNull():self.canvas.commit(self.canvas.image.transformed(QTransform().rotate(90)))
     def resize_image(self):
@@ -182,7 +261,7 @@ class Window(QMainWindow):
         if not path:return False
         if not Path(path).suffix:path += '.jpg' if 'JPEG' in selected else '.webp' if 'WebP' in selected else '.png'
         if not self.canvas.image.save(path):self.error('Could not save the image. Check the filename and folder permissions.');return False
-        self.dirty=False;self.statusBar().showMessage(f'Exported {path}');self.refresh_recent();return True
+        self.dirty=False;self.image_title.setText(Path(path).name);self.image_info.setText(f'{self.canvas.image.width():,} × {self.canvas.image.height():,} px  ·  Saved');self.statusBar().showMessage(f'Exported {path}');self.refresh_recent();return True
     def capture(self):
         if self.busy or not self.can_replace():return
         self.busy=True;self.capture_btn.setEnabled(False);self.hide()
@@ -244,10 +323,11 @@ class Window(QMainWindow):
         self.recorder.selection_ready.set()
         if not self.recorder.cancelled:self.showMinimized()
     def recording_started(self):
-        self.recording_since=time.monotonic();self.tick()
+        self.recording_since=time.monotonic();self.record_badge.setText('RECORDING');self.tick()
     def tick(self):
         if self.recording_since is not None:
             elapsed=int(time.monotonic()-self.recording_since)
+            self.record_badge.setText(f'RECORDING  {elapsed//60:02}:{elapsed%60:02}')
             self.statusBar().showMessage(f'● Recording {elapsed//60:02}:{elapsed%60:02} · Restore SnagForge and press Stop & save')
     def stop(self):
         if self.recorder:
@@ -256,7 +336,7 @@ class Window(QMainWindow):
     def recording_saved(self,path):
         self.refresh_recent();QMessageBox.information(self,'Recording saved',path)
     def recording_finished(self):
-        self.recording_since=None;self.busy=False;self.record_btn.setEnabled(True)
+        self.recording_since=None;self.record_badge.setText('READY');self.busy=False;self.record_btn.setEnabled(True)
         self.capture_btn.setEnabled(True);self.stop_btn.setEnabled(False);self.showNormal();self.raise_()
         self.statusBar().showMessage('Ready · Recording finished or cancelled')
     def refresh_recent(self):
@@ -266,6 +346,8 @@ class Window(QMainWindow):
             for path in paths[:80]:
                 self.recent.addItem(path.name)
                 self.recent.item(self.recent.count()-1).setData(Qt.ItemDataRole.UserRole,str(path))
+        self.recent_count.setText(str(self.recent.count()))
+        self.recent_empty.setVisible(self.recent.count()==0)
     def open_recent(self,item):
         path=Path(item.data(Qt.ItemDataRole.UserRole))
         if path.suffix.lower() in ('.mp4','.mp3'):QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
@@ -293,21 +375,11 @@ class Window(QMainWindow):
         if not self.can_replace():event.ignore();return
         event.accept()
 
-STYLE='''
-QMainWindow,QDialog { background:#191f2d; color:#e5edf7; }
-QWidget { font-family:"DejaVu Sans"; font-size:13px; color:#e5edf7; }
-QLabel#brand { font-size:23px; font-weight:800; color:#64dfcb; padding:12px 0; }
-QLabel#muted { color:#8fa0b8; font-size:10px; padding-left:14px; }
-QPushButton { background:#2b3548; border:1px solid #3b4860; border-radius:7px; padding:9px 12px; }
-QPushButton:hover { background:#38465d; border-color:#64dfcb; }
-QPushButton:disabled { color:#69788e; background:#202838; }
-QComboBox,QSpinBox { background:#252f42; border:1px solid #3b4860; padding:7px; border-radius:5px; }
-QListWidget { background:#141b29; border:1px solid #303c52; border-radius:6px; }
-QStatusBar { background:#111723; color:#8fa0b8; padding:5px; }
-QSplitter::handle { background:#303c52; width:1px; }
-'''
 
 def main():
+    if '--native' not in sys.argv and (Path(__file__).parent/'frontend'/'dist'/'index.html').is_file():
+        from web_shell import run
+        return run()
     app=QApplication(sys.argv);app.setApplicationName('SnagForge');app.setDesktopFileName('snagforge')
     app.setStyle('Fusion');app.setStyleSheet(STYLE)
     window=Window();window.show()
