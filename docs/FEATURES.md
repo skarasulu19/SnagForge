@@ -43,6 +43,10 @@ The current marquee is a full-screen overlay rendered from a portal-approved fra
 
 The user also requested similar workflows to those described on [SnagitPro](https://snagitpro.com/), an independent educational resource rather than the official Snagit product site. The feature baseline remains TechSmith's official documentation. Relevant targets include scrolling capture, screenshot annotation and stamps, redaction, OCR, screen recording, visual SOP creation, multi-monitor selection, and accessible screenshot descriptions. This section records requested scope; it does not mark those capabilities complete.
 
+## Delivered in 0.3.1
+
+Recording dialogs and the desktop marquee are attached to the visible Angular shell. Video and audio recordings auto-save to the local capture library, preview creation is validated, and finalized user-stopped media is retained even when GStreamer returns an interrupt status.
+
 ## Delivered in 0.3.0
 
 Callout, approval stamp, magnify and capture-information tools are available in both editors. They use the current annotation color and size, flatten into the image and participate in undo/redo history.

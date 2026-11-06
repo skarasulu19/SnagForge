@@ -10,6 +10,11 @@ from PySide6.QtCore import QThread, Signal
 from portal import Portal, Cancelled
 from media import pipeline, gst_string
 
+def recording_output_ok(path,returncode,details,stopped):
+    """A user-stopped gst-launch may report SIGINT despite a valid finalized file."""
+    valid_file=Path(path).is_file() and Path(path).stat().st_size>=128
+    return valid_file and 'ERROR' not in details and (not returncode or stopped)
+
 class CaptureWorker(QThread):
     image = Signal(str)
     error = Signal(str)
@@ -71,8 +76,9 @@ class Recorder(QThread):
                     with tempfile.TemporaryDirectory(prefix='snagforge-preview-') as tmp:
                         fd=await portal.remote()
                         path=str(Path(tmp)/'preview.png')
-                        cmd=['gst-launch-1.0','-q','pipewiresrc',f'fd={fd}',f'path={node}',
-                             'num-buffers=1','!','videoconvert','!','pngenc','!','filesink','location='+gst_string(path)]
+                        cmd=['gst-launch-1.0','-q','-e','pipewiresrc',f'fd={fd}',f'path={node}',
+                             'do-timestamp=true','num-buffers=1','!','videoconvert','!',
+                             'pngenc','snapshot=true','!','filesink','location='+gst_string(path)]
                         # A preview must not block the UI or leak its child on timeout.
                         with tempfile.TemporaryFile() as preview_log:
                             preview_process=subprocess.Popen(cmd,pass_fds=(fd,),stdout=preview_log,stderr=subprocess.STDOUT)
@@ -87,6 +93,8 @@ class Recorder(QThread):
                             if preview_process.returncode:
                                 preview_log.seek(0)
                                 raise RuntimeError(preview_log.read().decode(errors='replace')[-2500:])
+                        if not Path(path).is_file() or Path(path).stat().st_size<128:
+                            raise RuntimeError('The selected desktop source did not produce a marquee preview.')
                         self.preview.emit(path)
                         while not self.selection_ready.is_set():
                             if self.stop_event.is_set():
@@ -118,7 +126,7 @@ class Recorder(QThread):
                         raise RuntimeError('Encoder could not finalize in 20 seconds. The recording may be incomplete.')
                 log.seek(0)
                 details=log.read().decode(errors='replace')[-3500:]
-                if process.returncode or 'ERROR' in details or not Path(self.path).is_file() or Path(self.path).stat().st_size<128:
+                if not recording_output_ok(self.path,process.returncode,details,stopped):
                     raise RuntimeError('Recording failed.\n'+details)
                 if not stopped:
                     raise RuntimeError('Capture ended unexpectedly; check the saved file before using it.\n'+details)

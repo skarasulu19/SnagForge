@@ -4,7 +4,7 @@
 
 An independent, GPL-3.0-licensed screenshot and recording workbench built for Ubuntu desktops. Inspired by common screen capture workflows; not affiliated with TechSmith and not compatible with Snagit project files.
 
-**Version 0.3.0-alpha · Target: Ubuntu 26.x GNOME / Wayland · Python 3.10+ · Angular 22**
+**Version 0.3.1-alpha · Target: Ubuntu 26.x GNOME / Wayland · Python 3.10+ · Angular 22**
 
 > This is an early source release, not full Snagit feature parity. Editor, stitching, selection mapping and portal protocol behavior have automated tests. Live capture, audio and encoding still require validation on a real Ubuntu 26 desktop. There are no fabricated recording screenshots or claimed live recording results.
 
@@ -23,6 +23,10 @@ chmod +x install.sh run.sh publish.sh
 The first command installs Ubuntu packages with `sudo`, creates a project-local virtual environment, downloads Python dependencies from PyPI and adds an application menu entry. Run it as your normal desktop user. If dependencies are already installed, use `./install.sh`.
 
 Install dependencies only on the Ubuntu computer where you want to run the app. Do not run the GUI as root. No Docker, web server or account is needed to use it.
+
+## What changed in 0.3.1
+
+The recording marquee and all native recording dialogs are now parented to the visible Angular shell instead of the hidden capture engine. Recordings auto-save into `~/Pictures/SnagForge`, preview generation validates its PNG output, and a finalized MP4 is accepted after a user stop even when GStreamer reports the interrupt signal as its process status.
 
 ## What changed in 0.3.0
 
@@ -133,4 +137,4 @@ This repository uses GPL-3.0, as selected when the repository was created. The o
 
 ## Checks
 
-Eighteen Python tests pass. The actual Angular desktop window was exercised with synthetic images: startup, native bridge synchronization, rectangle annotation, native clipboard copy, undo/redo, and three rendered UI screenshots. Live Ubuntu 26 screen/audio recording remains unverified. See [validation](docs/VALIDATION.md) and the [Snagit + ShareX hybrid roadmap](docs/HYBRID_ROADMAP.md).
+Twenty Python tests pass. The actual Angular desktop window was exercised with synthetic images: startup, native bridge synchronization, rectangle annotation, native clipboard copy, undo/redo, and three rendered UI screenshots. Live Ubuntu 26 screen/audio recording remains unverified. See [validation](docs/VALIDATION.md) and the [Snagit + ShareX hybrid roadmap](docs/HYBRID_ROADMAP.md).

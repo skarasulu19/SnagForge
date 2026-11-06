@@ -3,7 +3,7 @@
 ## Executed in the development environment
 
 - Python 3.12 and PySide6 6.12; Linux headless Qt offscreen platform.
-- Eighteen passing automated tests cover image annotation/crop/history/blur, callout/stamp/magnify/capture-info history, editor and full-screen marquee coordinate mapping, marquee keyboard actions, even-dimension video crop conversion, recorder action states, opaque redaction, stitch pixel continuity, invalid stitch input, pipeline/audio/crop arguments, early portal responses, portal cancellation, idempotent portal cleanup, image bridge validation, bridge echo suppression and navigation confinement.
+- Twenty passing automated tests cover image annotation/crop/history/blur, callout/stamp/magnify/capture-info history, visible-shell dialog parenting, finalized recording acceptance, editor and full-screen marquee coordinate mapping, marquee keyboard actions, even-dimension video crop conversion, recorder action states, opaque redaction, stitch pixel continuity, invalid stitch input, pipeline/audio/crop arguments, early portal responses, portal cancellation, idempotent portal cleanup, image bridge validation, bridge echo suppression and navigation confinement.
 - Rendered and visually inspected actual editor/selection/scrolling/recording-setup widgets with synthetic sample data.
 - Python compilation and shell syntax checks.
 

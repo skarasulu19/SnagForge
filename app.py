@@ -231,8 +231,12 @@ class Window(QMainWindow):
         pin.finished.connect(lambda result,p=pin:self.pins.remove(p) if p in self.pins else None)
         pin.show()
 
+    def dialog_host(self):
+        """Return the visible top-level window when the Angular shell is active."""
+        return getattr(self,'shell',None) or self
+
     def error(self,message):
-        QMessageBox.warning(self,'SnagForge',message)
+        QMessageBox.warning(self.dialog_host(),'SnagForge',message)
     def changed(self):
         self.dirty=True
         im=self.canvas.image
@@ -241,7 +245,7 @@ class Window(QMainWindow):
         self.statusBar().showMessage(f'{self.tool.currentText()} · Drag on your image to annotate')
     def can_replace(self):
         if not self.dirty:return True
-        answer=QMessageBox.question(self,'Unsaved image','Export the current image before replacing it?',
+        answer=QMessageBox.question(self.dialog_host(),'Unsaved image','Export the current image before replacing it?',
             QMessageBox.StandardButton.Save|QMessageBox.StandardButton.Discard|QMessageBox.StandardButton.Cancel)
         if answer==QMessageBox.StandardButton.Save:return self.save()
         return answer==QMessageBox.StandardButton.Discard
@@ -250,7 +254,7 @@ class Window(QMainWindow):
         self.canvas.load(image);self.dirty=True
     def open_image(self):
         if not self.can_replace():return
-        path,_=QFileDialog.getOpenFileName(self,'Open image','','Images (*.png *.jpg *.jpeg *.webp *.bmp)')
+        path,_=QFileDialog.getOpenFileName(self.dialog_host(),'Open image','','Images (*.png *.jpg *.jpeg *.webp *.bmp)')
         if path:self.load_image(QImage(path))
     def paste(self):
         image=QApplication.clipboard().image()
@@ -260,13 +264,13 @@ class Window(QMainWindow):
         if not self.canvas.image.isNull():
             QApplication.clipboard().setImage(self.canvas.image);self.statusBar().showMessage('Image copied to clipboard')
     def pick_color(self):
-        color=QColorDialog.getColor(self.canvas.color,self)
+        color=QColorDialog.getColor(self.canvas.color,self.dialog_host())
         if color.isValid():self.set_color(color)
     def rotate(self):
         if not self.canvas.image.isNull():self.canvas.commit(self.canvas.image.transformed(QTransform().rotate(90)))
     def resize_image(self):
         if self.canvas.image.isNull():return
-        width,ok=QInputDialog.getInt(self,'Resize image','New width (aspect ratio is preserved):',self.canvas.image.width(),1,20000)
+        width,ok=QInputDialog.getInt(self.dialog_host(),'Resize image','New width (aspect ratio is preserved):',self.canvas.image.width(),1,20000)
         if ok:self.canvas.commit(self.canvas.image.scaledToWidth(width,Qt.TransformationMode.SmoothTransformation))
     def add_frame(self):
         if self.canvas.image.isNull():return
@@ -281,7 +285,7 @@ class Window(QMainWindow):
     def save(self):
         if self.canvas.image.isNull():return False
         CAPTURES.mkdir(parents=True,exist_ok=True)
-        path,selected=QFileDialog.getSaveFileName(self,'Export image',str(CAPTURES/f'capture-{datetime.now():%Y%m%d-%H%M%S}.png'),'PNG (*.png);;JPEG (*.jpg);;WebP (*.webp)')
+        path,selected=QFileDialog.getSaveFileName(self.dialog_host(),'Export image',str(CAPTURES/f'capture-{datetime.now():%Y%m%d-%H%M%S}.png'),'PNG (*.png);;JPEG (*.jpg);;WebP (*.webp)')
         if not path:return False
         if not Path(path).suffix:path += '.jpg' if 'JPEG' in selected else '.webp' if 'WebP' in selected else '.png'
         if not self.canvas.image.save(path):self.error('Could not save the image. Check the filename and folder permissions.');return False
@@ -302,7 +306,7 @@ class Window(QMainWindow):
         self.show();self.raise_()
         image=QImage(path)
         if image.isNull():self.error('Screenshot could not be read.');return
-        chooser=RegionDialog(image,self)
+        chooser=RegionDialog(image,self.dialog_host())
         if chooser.exec():self.load_image(image.copy(chooser.region) if chooser.region else image)
     def scrolling(self):
         if self.busy or not self.can_replace():return
@@ -318,9 +322,9 @@ class Window(QMainWindow):
         if not shutil.which('gst-launch-1.0'):self.error('Install GStreamer first: see README.md.');return
         CAPTURES.mkdir(parents=True,exist_ok=True)
         suffix='mp3' if mode=='MP3 audio' else 'mp4'
-        path,_=QFileDialog.getSaveFileName(self,'Save recording',str(CAPTURES/f'recording-{datetime.now():%Y%m%d-%H%M%S}.{suffix}'),f'{suffix.upper()} (*.{suffix})')
-        if not path:return
-        if not path.lower().endswith('.'+suffix):path+='.'+suffix
+        # Recordings auto-save to the library. This avoids a hidden native save
+        # dialog when the Angular shell owns the visible desktop window.
+        path=str(CAPTURES/f'recording-{datetime.now():%Y%m%d-%H%M%S-%f}.{suffix}')
         self.recorder=Recorder(path,mode,audio,self.region.isChecked())
         self.recorder.preview.connect(self.video_region)
         self.recorder.started.connect(self.recording_started)
@@ -337,7 +341,7 @@ class Window(QMainWindow):
         image=QImage(path)
         if image.isNull():
             self.recorder.cancelled=True;self.recorder.selection_ready.set();return
-        chooser=RegionDialog(image,self)
+        chooser=RegionDialog(image,self.dialog_host())
         if chooser.exec():
             rect=chooser.region or image.rect()
             try:self.recorder.crop=recording_crop(image.width(),image.height(),(rect.x(),rect.y(),rect.width(),rect.height()))
@@ -357,7 +361,7 @@ class Window(QMainWindow):
             self.recorder.stop_event.set();self.stop_btn.setEnabled(False)
             self.statusBar().showMessage('Finalizing recording… keep SnagForge open')
     def recording_saved(self,path):
-        self.refresh_recent();QMessageBox.information(self,'Recording saved',path)
+        self.refresh_recent();QMessageBox.information(self.dialog_host(),'Recording saved',f'Saved to:\n{path}')
     def recording_finished(self):
         self.recording_since=None;self.record_badge.setText('READY');self.busy=False;self.record_btn.setEnabled(True)
         self.capture_btn.setEnabled(True);self.stop_btn.setEnabled(False);self.showNormal();self.raise_()
@@ -388,7 +392,7 @@ class Window(QMainWindow):
                 path=str(Path(folder)/'image.png');self.canvas.image.save(path)
                 result=subprocess.run(['tesseract',path,'stdout'],capture_output=True,text=True,timeout=40)
                 if result.returncode:raise RuntimeError(result.stderr)
-            text,ok=QInputDialog.getMultiLineText(self,'Extracted text','Review and copy recognized text:',result.stdout)
+            text,ok=QInputDialog.getMultiLineText(self.dialog_host(),'Extracted text','Review and copy recognized text:',result.stdout)
             if ok:QApplication.clipboard().setText(text)
         except Exception as e:self.error(str(e))
     def closeEvent(self,event):

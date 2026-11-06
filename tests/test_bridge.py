@@ -3,7 +3,7 @@ import os
 os.environ.setdefault('QT_QPA_PLATFORM','offscreen')
 import unittest
 from pathlib import Path
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication,QMainWindow
 from PySide6.QtGui import QImage,QColor
 from PySide6.QtCore import QUrl
 from web_shell import decode_image,encode_image,DesktopBridge,EngineWindow,LocalPage,ROOT
@@ -44,5 +44,9 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(engine.record_btn.text(),'Start audio recording')
         self.assertFalse(engine.region.isEnabled())
         engine.timer.stop();engine.close()
+    def test_angular_engine_parents_dialogs_to_visible_shell(self):
+        engine=EngineWindow();shell=QMainWindow();engine.shell=shell
+        self.assertIs(engine.dialog_host(),shell)
+        engine.timer.stop();engine.shell=None;engine.close();shell.close()
 
 if __name__=='__main__':unittest.main()

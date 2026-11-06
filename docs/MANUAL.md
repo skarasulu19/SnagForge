@@ -1,6 +1,6 @@
 # SnagForge user manual
 
-**0.3.0 alpha · Angular desktop interface · Ubuntu 26.x target**
+**0.3.1 alpha · Angular desktop interface · Ubuntu 26.x target**
 
 SnagForge is an independent, open-source capture studio inspired by screenshot editing and automation workflows. The Angular interface runs locally in a Qt desktop window and communicates with a native Python capture engine. No web server or cloud account is required for desktop use.
 
@@ -97,7 +97,7 @@ By default files are saved under `~/Pictures/SnagForge`. The library only scans 
 3. Choose **None**, **Microphone**, or **System audio**. MP3 requires an audio source.
 4. For video, enable **Marquee desktop area**.
 5. Optionally set a delay and click **Select area & record**. The native interface also supports **Ctrl+Shift+R**.
-6. Choose the output file. For video, approve the desktop screen/window picker.
+6. Approve the desktop screen/window picker. The recording will auto-save under `~/Pictures/SnagForge`.
 7. Drag the crosshair marquee on the full-screen desktop overlay. The displayed dimensions map to source pixels and only that rectangle is encoded. Press **Enter** to record the whole approved source or **Esc** to cancel.
 8. Restore SnagForge and click **Stop & save**. Wait for the file to finalize, then verify playback.
 

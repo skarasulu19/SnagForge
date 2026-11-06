@@ -2,6 +2,7 @@ import asyncio
 import os
 os.environ.setdefault('QT_QPA_PLATFORM','offscreen')
 import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 from pathlib import Path
@@ -14,6 +15,7 @@ from PySide6.QtTest import QTest
 from editor import Canvas, RegionDialog, RegionSelector
 from media import pipeline, recording_crop, stitch
 from portal import Portal, Cancelled
+from workers import recording_output_ok
 from dbus_next import Message, MessageType, Variant
 
 app=QApplication.instance() or QApplication([])
@@ -91,6 +93,11 @@ class MediaTests(unittest.TestCase):
     def test_recording_marquee_maps_to_even_crop_margins(self):
         self.assertEqual(recording_crop(1920,1080,(101,53,801,601)),(101,53,1019,427))
         with self.assertRaises(ValueError):recording_crop(1920,1080,(10,10,1,1))
+    def test_user_stopped_finalized_recording_is_accepted(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'capture.mp4';path.write_bytes(b'x'*256)
+            self.assertTrue(recording_output_ok(path,-2,'',True))
+            self.assertFalse(recording_output_ok(path,-2,'ERROR encoder failed',True))
 
 class FakeBus:
     unique_name=':1.23'
