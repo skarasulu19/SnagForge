@@ -44,7 +44,9 @@ class CaptureWorker(QThread):
 
 class Recorder(QThread):
     preview = Signal(str)
-    started = Signal()
+    # QThread.started is emitted when the worker thread starts, before portal
+    # permission or encoding. Never reuse it to mean recording is active.
+    recording_active = Signal()
     saved = Signal(str)
     error = Signal(str)
     def __init__(self,path,mode,audio,region):
@@ -111,8 +113,8 @@ class Recorder(QThread):
                                          stdout=log,stderr=subprocess.STDOUT)
                 # Catch immediate startup/plugin errors before showing Recording.
                 await asyncio.sleep(.7)
-                if process.poll() is None:
-                    self.started.emit()
+                if process.poll() is None and not self.stop_event.is_set():
+                    self.recording_active.emit()
                 while process.poll() is None and not self.stop_event.is_set():
                     await asyncio.sleep(.1)
                 stopped=self.stop_event.is_set()
@@ -143,3 +145,4 @@ class Recorder(QThread):
                 os.close(fd)
             if portal:
                 await portal.close()
+

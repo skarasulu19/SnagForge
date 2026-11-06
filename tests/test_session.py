@@ -3,6 +3,8 @@ import os
 os.environ.setdefault('QT_QPA_PLATFORM','offscreen')
 import tempfile
 import socket
+import subprocess
+import sys
 import threading
 import unittest
 from pathlib import Path
@@ -20,6 +22,23 @@ app=QApplication.instance() or QApplication([])
 
 
 class SessionTests(unittest.TestCase):
+    def test_process_lock_excludes_a_second_python_process(self):
+        code="""import sys
+from PySide6.QtCore import QCoreApplication, QLockFile
+app=QCoreApplication([]);app.setApplicationName('SnagForge')
+lock=QLockFile(sys.argv[1]);lock.setStaleLockTime(0)
+print(lock.tryLock(0),flush=True)
+sys.stdin.read()
+"""
+        with tempfile.TemporaryDirectory() as directory:
+            path=str(Path(directory)/'snagforge-session.lock')
+            first=subprocess.Popen([sys.executable,'-c',code,path],stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
+            try:
+                self.assertEqual(first.stdout.readline().strip(),'True')
+                second=subprocess.run([sys.executable,'-c',code,path],input='',capture_output=True,text=True,timeout=5,check=True)
+                self.assertEqual(second.stdout.strip(),'False')
+            finally:first.communicate(input='',timeout=5)
+
     def test_second_launch_activates_existing_window(self):
         try:
             probe=socket.socket(socket.AF_UNIX);probe.close()

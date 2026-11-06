@@ -155,7 +155,7 @@ class Window(QMainWindow):
         side.addSpacing(14)
         privacy=QLabel('●  Local by default');privacy.setStyleSheet('color:#73c5ac;font-size:11px;padding:10px 0;');side.addWidget(privacy)
         side.addWidget(action_button('  Help & user manual','help',self.manual,'sideQuiet','#989898'))
-        foot=QHBoxLayout();version=QLabel('v0.3.3');version.setObjectName('sideSub');foot.addWidget(version)
+        foot=QHBoxLayout();version=QLabel('v0.3.4');version.setObjectName('sideSub');foot.addWidget(version)
         alpha=QLabel('ALPHA');alpha.setObjectName('alpha');foot.addWidget(alpha);foot.addStretch();side.addLayout(foot)
         author=QLabel('Author: Sinan Ozgu Karasulu');author.setWordWrap(True);author.setObjectName('sideSub');side.addWidget(author)
 
@@ -370,7 +370,7 @@ class Window(QMainWindow):
         path=str(CAPTURES/f'recording-{datetime.now():%Y%m%d-%H%M%S-%f}.{suffix}')
         self.recorder=Recorder(path,mode,audio,self.region.isChecked())
         self.recorder.preview.connect(self.video_region)
-        self.recorder.started.connect(self.recording_started)
+        self.recorder.recording_active.connect(self.recording_started)
         self.recorder.saved.connect(self.recording_saved)
         self.recorder.error.connect(self.error)
         self.recorder.finished.connect(self.recording_finished)
@@ -407,6 +407,7 @@ class Window(QMainWindow):
         host.setCentralWidget(chooser);host.showFullScreen()
         chooser.show();chooser.selector.setFocus(Qt.FocusReason.OtherFocusReason)
     def recording_started(self):
+        if self.recording_since is not None:return
         self.recording_since=time.monotonic();self.record_badge.setText('RECORDING')
         self.record_controller=RecordingController(self.stop);self.record_controller.show();self.record_controller.raise_();self.tick()
     def tick(self):

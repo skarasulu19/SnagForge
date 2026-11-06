@@ -4,7 +4,7 @@
 
 An independent, GPL-3.0-licensed screenshot and recording workbench built for Ubuntu desktops. Inspired by common screen capture workflows; not affiliated with TechSmith and not compatible with Snagit project files.
 
-**Version 0.3.3-alpha · Target: Ubuntu 26.x GNOME / Wayland · Python 3.10+ · Angular 22**
+**Version 0.3.4-alpha · Target: Ubuntu 26.x GNOME / Wayland · Python 3.10+ · Angular 22**
 
 > This is an early source release, not full Snagit feature parity. Editor, stitching, selection mapping and portal protocol behavior have automated tests. Live capture, audio and encoding still require validation on a real Ubuntu 26 desktop. There are no fabricated recording screenshots or claimed live recording results.
 
@@ -23,6 +23,12 @@ chmod +x install.sh run.sh publish.sh
 The first command installs Ubuntu packages with `sudo`, creates a project-local virtual environment, downloads Python dependencies from PyPI and adds an application menu entry. Run it as your normal desktop user. If dependencies are already installed, use `./install.sh`.
 
 Install dependencies only on the Ubuntu computer where you want to run the app. Do not run the GUI as root. No Docker, web server or account is needed to use it.
+
+## What changed in 0.3.4
+
+A critical worker-signal collision is fixed: Qt emits `QThread.started` when a thread starts, before capture permission or an encoder exists. SnagForge previously reused this signal for recording, which could create an early timer and a second orphaned timer when the encoder became active. Recording now has its own `recording_active` signal, duplicate active notifications cannot create extra controllers, and stopping during encoder warmup cannot display a new recording timer.
+
+Regression checks use real Qt worker threads, verify cleanup of the timer, simulate stopping during encoder warmup, and test lock exclusion with two Python processes. Live Ubuntu portal/encoder behavior still requires desktop validation.
 
 ## What changed in 0.3.3
 
@@ -162,5 +168,5 @@ Sinan Ozgu Karasulu
 
 ## Checks
 
-The current Python suite has 44 passing tests and one local-socket integration test skipped in restricted environments. The actual Angular desktop window was exercised with synthetic images: startup, native bridge synchronization, rectangle annotation, native clipboard copy, undo/redo, and three rendered UI screenshots. Live Ubuntu 26 screen/audio recording remains unverified. See [validation](docs/VALIDATION.md) and the [Snagit + ShareX hybrid roadmap](docs/HYBRID_ROADMAP.md).
+The current Python suite has 50 passing tests and one local-socket integration test skipped in restricted environments. The actual Angular desktop window was exercised with synthetic images: startup, native bridge synchronization, rectangle annotation, native clipboard copy, undo/redo, and three rendered UI screenshots. Live Ubuntu 26 screen/audio recording remains unverified. See [validation](docs/VALIDATION.md) and the [Snagit + ShareX hybrid roadmap](docs/HYBRID_ROADMAP.md).
 
