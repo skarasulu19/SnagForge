@@ -10,7 +10,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from PIL import Image
 from PySide6.QtCore import QPoint, QPointF, QRect, Qt
 from PySide6.QtGui import QImage
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication,QDialog
 from PySide6.QtTest import QTest
 from editor import Canvas, RegionDialog, RegionSelector
 from media import pipeline, recording_crop, stitch
@@ -72,6 +72,12 @@ class RegionSelectorTests(unittest.TestCase):
         QTest.keyClick(self.selector,Qt.Key.Key_Return);QTest.keyClick(self.selector,Qt.Key.Key_Escape)
         QTest.mouseClick(self.selector,Qt.MouseButton.RightButton,pos=QPoint(300,300))
         self.assertEqual(events,['full','cancel','cancel'])
+    def test_region_dialog_waits_for_explicit_confirmation(self):
+        image=QImage(800,600,QImage.Format.Format_ARGB32);image.fill(Qt.GlobalColor.white)
+        dialog=RegionDialog(image,confirm_text='Record selected area')
+        dialog.preview_selection(QRect(50,60,320,240))
+        self.assertEqual(dialog.result(),0);self.assertTrue(dialog.confirm_button.isEnabled())
+        dialog.confirm_selection();self.assertEqual(dialog.result(),QDialog.DialogCode.Accepted)
 
 class MediaTests(unittest.TestCase):
     def test_stitch_continuity(self):

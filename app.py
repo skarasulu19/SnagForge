@@ -97,12 +97,34 @@ class ScrollDialog(QDialog):
         if getattr(self,'worker',None) and self.worker.isRunning():return
         super().reject()
 
+class RecordingController(QDialog):
+    """Small always-on-top timer and stop control shown during recording."""
+    def __init__(self,stop_callback):
+        super().__init__(None,Qt.WindowType.Tool|Qt.WindowType.FramelessWindowHint|Qt.WindowType.WindowStaysOnTopHint)
+        self.setWindowTitle('SnagForge · Recording');self.setFixedSize(300,92)
+        self.setStyleSheet('QDialog{background:#172338;border:2px solid #7561ee;border-radius:12px;} QLabel{color:white;} QPushButton{background:#e45d70;color:white;border:0;border-radius:7px;padding:10px 16px;font-weight:700;} QPushButton:disabled{background:#667085;}')
+        row=QHBoxLayout(self);row.setContentsMargins(16,14,16,14);row.setSpacing(14)
+        dot=QLabel('●');dot.setStyleSheet('color:#ff6478;font-size:18px;');row.addWidget(dot)
+        column=QVBoxLayout();caption=QLabel('RECORDING');caption.setStyleSheet('color:#aebbd0;font-size:9px;font-weight:700;')
+        self.elapsed=QLabel('00:00');self.elapsed.setStyleSheet('font-size:24px;font-weight:800;')
+        column.addWidget(caption);column.addWidget(self.elapsed);row.addLayout(column,1)
+        self.stop_button=QPushButton('Stop & save');self.stop_button.clicked.connect(stop_callback);row.addWidget(self.stop_button)
+    def showEvent(self,event):
+        super().showEvent(event)
+        screen=QApplication.primaryScreen()
+        if screen:
+            area=screen.availableGeometry();self.move(area.right()-self.width()-24,area.bottom()-self.height()-24)
+    def set_elapsed(self,seconds):
+        self.elapsed.setText(f'{seconds//60:02}:{seconds%60:02}')
+    def finalizing(self):
+        self.stop_button.setEnabled(False);self.stop_button.setText('Finalizing…')
+
 class Window(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('SnagForge · Capture studio');self.resize(1520,940)
         self.setMinimumSize(1250,790)
-        self.recorder=None;self.capture_worker=None;self.busy=False;self.dirty=False
+        self.recorder=None;self.record_controller=None;self.capture_worker=None;self.busy=False;self.dirty=False
         self.recording_since=None;self.pins=[]
         root=QWidget();self.setCentralWidget(root)
         shell=QHBoxLayout(root);shell.setContentsMargins(0,0,0,0);shell.setSpacing(0)
@@ -306,7 +328,7 @@ class Window(QMainWindow):
         self.show();self.raise_()
         image=QImage(path)
         if image.isNull():self.error('Screenshot could not be read.');return
-        chooser=RegionDialog(image,self.dialog_host())
+        chooser=RegionDialog(image,self.dialog_host(),'Capture selected area')
         if chooser.exec():self.load_image(image.copy(chooser.region) if chooser.region else image)
     def scrolling(self):
         if self.busy or not self.can_replace():return
@@ -341,7 +363,7 @@ class Window(QMainWindow):
         image=QImage(path)
         if image.isNull():
             self.recorder.cancelled=True;self.recorder.selection_ready.set();return
-        chooser=RegionDialog(image,self.dialog_host())
+        chooser=RegionDialog(image,self.dialog_host(),'Record selected area')
         if chooser.exec():
             rect=chooser.region or image.rect()
             try:self.recorder.crop=recording_crop(image.width(),image.height(),(rect.x(),rect.y(),rect.width(),rect.height()))
@@ -350,19 +372,23 @@ class Window(QMainWindow):
         self.recorder.selection_ready.set()
         if not self.recorder.cancelled:self.showMinimized()
     def recording_started(self):
-        self.recording_since=time.monotonic();self.record_badge.setText('RECORDING');self.tick()
+        self.recording_since=time.monotonic();self.record_badge.setText('RECORDING')
+        self.record_controller=RecordingController(self.stop);self.record_controller.show();self.record_controller.raise_();self.tick()
     def tick(self):
         if self.recording_since is not None:
             elapsed=int(time.monotonic()-self.recording_since)
             self.record_badge.setText(f'RECORDING  {elapsed//60:02}:{elapsed%60:02}')
+            if self.record_controller:self.record_controller.set_elapsed(elapsed)
             self.statusBar().showMessage(f'● Recording {elapsed//60:02}:{elapsed%60:02} · Restore SnagForge and press Stop & save')
     def stop(self):
         if self.recorder:
             self.recorder.stop_event.set();self.stop_btn.setEnabled(False)
+            if self.record_controller:self.record_controller.finalizing()
             self.statusBar().showMessage('Finalizing recording… keep SnagForge open')
     def recording_saved(self,path):
         self.refresh_recent();QMessageBox.information(self.dialog_host(),'Recording saved',f'Saved to:\n{path}')
     def recording_finished(self):
+        if self.record_controller:self.record_controller.close();self.record_controller=None
         self.recording_since=None;self.record_badge.setText('READY');self.busy=False;self.record_btn.setEnabled(True)
         self.capture_btn.setEnabled(True);self.stop_btn.setEnabled(False);self.showNormal();self.raise_()
         self.update_record_action();self.statusBar().showMessage('Ready · Recording finished or cancelled')

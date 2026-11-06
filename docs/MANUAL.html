@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SnagForge User Manual</title><style>body{font:16px/1.65 system-ui,sans-serif;color:#23334a;max-width:1050px;margin:40px auto;padding:0 24px}h1,h2{color:#153b56}h2{margin-top:2em;border-bottom:1px solid #d7e2eb;padding-bottom:8px}img{max-width:100%;border-radius:10px;border:1px solid #d7e2eb}table{border-collapse:collapse;width:100%;font-size:14px}td,th{border:1px solid #d7e2eb;text-align:left;padding:10px}th{background:#eef5f8}pre{background:#142238;color:#ecf4fb;padding:18px;overflow:auto;border-radius:8px}code{font-family:monospace}a{color:#087b74}@media print{body{font-size:11px;margin:0}h2{break-after:avoid}img,table{break-inside:avoid}}</style><body><h1>SnagForge user manual</h1>
-<p><strong>0.3.1 alpha · Angular desktop interface · Ubuntu 26.x target</strong></p>
+<p><strong>0.3.2 alpha · Angular desktop interface · Ubuntu 26.x target</strong></p>
 <p>SnagForge is an independent, open-source capture studio inspired by screenshot editing and automation workflows. The Angular interface runs locally in a Qt desktop window and communicates with a native Python capture engine. No web server or cloud account is required for desktop use.</p>
 <p>The editor and native bridge have been exercised with synthetic data. Live GNOME/Wayland capture, sound routing and media encoding still require Ubuntu desktop acceptance testing. Do not treat the screenshots in this manual as evidence of successful video capture.</p>
 <p><img alt="Actual Angular desktop editor with synthetic demonstration content" src="screenshots/05-angular-editor.png" /></p>
@@ -119,11 +119,11 @@
 <li>Open <strong>Screen recorder</strong>.</li>
 <li>Choose <strong>MP4 video</strong> or <strong>MP3 audio</strong>.</li>
 <li>Choose <strong>None</strong>, <strong>Microphone</strong>, or <strong>System audio</strong>. MP3 requires an audio source.</li>
-<li>For video, enable <strong>Marquee desktop area</strong>.</li>
+<li>Under <strong>Capture area</strong>, choose <strong>Selected area</strong> or <strong>Full screen/window</strong>.</li>
 <li>Optionally set a delay and click <strong>Select area &amp; record</strong>. The native interface also supports <strong>Ctrl+Shift+R</strong>.</li>
 <li>Approve the desktop screen/window picker. The recording auto-saves under <code>~/Pictures/SnagForge</code>.</li>
-<li>Drag the crosshair marquee on the full-screen desktop overlay. The displayed dimensions map to source pixels and only that rectangle is encoded. Press <strong>Enter</strong> for the full approved source or <strong>Esc</strong> to cancel.</li>
-<li>Restore SnagForge and click <strong>Stop &amp; save</strong>. Wait for the file to finalize, then verify playback.</li>
+<li>Drag the crosshair marquee on the full-screen desktop overlay. The rectangle remains visible after release so you can redraw it. Click <strong>Record selected area</strong> to confirm, press <strong>Enter</strong> to confirm the current selection, choose <strong>Use full source</strong>, or press <strong>Esc</strong> to cancel.</li>
+<li>A small always-on-top controller displays elapsed recording time. Click <strong>Stop &amp; save</strong>, wait for finalization, then verify playback.</li>
 </ol>
 <p>Current video encoding uses software x264 / H.264, MP4 and 30 fps. Audio in MP4 uses AAC; audio-only export uses MP3. Hardware encoding, 60 fps, webcam overlays, pause/resume, audio meters, simultaneous microphone/system mixing, noise reduction and built-in video trimming are not implemented.</p>
 <p>Restoring SnagForge can appear in a full-monitor recording. Capture a separate window to avoid that where possible. The alpha has no recording tray control. An interrupted recording or unavailable source can leave a partial file. Live portal capture, encoding and audio routing remain unverified on Ubuntu 26.</p>

@@ -5,7 +5,7 @@ from datetime import datetime
 from PIL import Image as PillowImage, ImageFilter
 from PySide6.QtCore import Qt, QPointF, QRect, QRectF, Signal, QBuffer, QIODevice
 from PySide6.QtGui import QColor, QImage, QPainter, QPen, QPolygonF, QFont
-from PySide6.QtWidgets import QWidget, QInputDialog, QDialog, QVBoxLayout, QLabel, QDialogButtonBox
+from PySide6.QtWidgets import QWidget, QInputDialog, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QDialogButtonBox, QPushButton
 
 def blur_image(image,radius):
     """Apply a real Gaussian blur to a QImage using the local Pillow dependency."""
@@ -210,6 +210,7 @@ class Canvas(QWidget):
 class RegionSelector(QWidget):
     """Full-screen, portal-safe marquee selector for a captured source frame."""
     selected = Signal(QRect)
+    confirmed = Signal(QRect)
     full_source = Signal()
     cancelled = Signal()
 
@@ -281,7 +282,8 @@ class RegionSelector(QWidget):
         if event.button()==Qt.MouseButton.RightButton:
             self.cancelled.emit();return
         if event.button()!=Qt.MouseButton.LeftButton or not self.image_rect().contains(event.position()):return
-        self.start=event.position();self.end=event.position();self.pointer=event.position();self.update()
+        self.start=event.position();self.end=event.position();self.pointer=event.position()
+        self.setFocus(Qt.FocusReason.MouseFocusReason);self.grabMouse();self.update()
 
     def mouseMoveEvent(self,event):
         self.pointer=event.position()
@@ -290,17 +292,21 @@ class RegionSelector(QWidget):
 
     def mouseReleaseEvent(self,event):
         if event.button()!=Qt.MouseButton.LeftButton or self.start is None:return
+        self.releaseMouse()
         self.end=event.position();region=self.selection();self.update()
         if region.width()>1 and region.height()>1:self.selected.emit(region)
         else:self.start=None;self.end=None
 
     def keyPressEvent(self,event):
         if event.key()==Qt.Key.Key_Escape:self.cancelled.emit()
-        elif event.key() in (Qt.Key.Key_Return,Qt.Key.Key_Enter):self.full_source.emit()
+        elif event.key() in (Qt.Key.Key_Return,Qt.Key.Key_Enter):
+            region=self.selection()
+            if region.width()>1 and region.height()>1:self.confirmed.emit(region)
+            else:self.full_source.emit()
         else:super().keyPressEvent(event)
 
 class RegionDialog(QDialog):
-    def __init__(self,image,parent=None):
+    def __init__(self,image,parent=None,confirm_text='Use selected area'):
         super().__init__(parent)
         self.setWindowTitle('SnagForge · Select desktop region')
         self.setWindowFlags(Qt.WindowType.Dialog|Qt.WindowType.FramelessWindowHint|Qt.WindowType.WindowStaysOnTopHint)
@@ -309,12 +315,29 @@ class RegionDialog(QDialog):
         self.region=None
         layout=QVBoxLayout(self);layout.setContentsMargins(0,0,0,0);layout.setSpacing(0)
         self.selector=RegionSelector(image,self);self.canvas=self.selector
-        self.selector.selected.connect(self.choose)
+        self.selector.selected.connect(self.preview_selection)
+        self.selector.confirmed.connect(self.choose)
         self.selector.full_source.connect(self.accept)
         self.selector.cancelled.connect(self.reject)
-        layout.addWidget(self.selector)
+        layout.addWidget(self.selector,1)
+        actions=QHBoxLayout();actions.setContentsMargins(18,12,18,12);actions.setSpacing(10)
+        hint=QLabel('Drag to select. Redraw as needed, then confirm.');hint.setStyleSheet('color:#64748b;')
+        actions.addWidget(hint);actions.addStretch()
+        cancel=QPushButton('Cancel');cancel.clicked.connect(self.reject);actions.addWidget(cancel)
+        full=QPushButton('Use full source');full.clicked.connect(self.use_full_source);actions.addWidget(full)
+        self.confirm_button=QPushButton(confirm_text);self.confirm_button.setEnabled(False)
+        self.confirm_button.setObjectName('primary')
+        self.confirm_button.clicked.connect(self.confirm_selection);actions.addWidget(self.confirm_button)
+        layout.addLayout(actions)
     def showEvent(self,event):
         super().showEvent(event);self.selector.setFocus(Qt.FocusReason.ActiveWindowFocusReason)
     def choose(self,rect):
         self.region=rect
         self.accept()
+    def preview_selection(self,rect):
+        self.region=rect;self.confirm_button.setEnabled(True)
+        self.confirm_button.setText(self.confirm_button.text().split('  ·  ')[0]+f'  ·  {rect.width()} × {rect.height()}')
+    def confirm_selection(self):
+        if self.region and self.region.width()>1 and self.region.height()>1:self.accept()
+    def use_full_source(self):
+        self.region=None;self.accept()

@@ -1,6 +1,6 @@
 # SnagForge user manual
 
-**0.3.1 alpha · Angular desktop interface · Ubuntu 26.x target**
+**0.3.2 alpha · Angular desktop interface · Ubuntu 26.x target**
 
 SnagForge is an independent, open-source capture studio inspired by screenshot editing and automation workflows. The Angular interface runs locally in a Qt desktop window and communicates with a native Python capture engine. No web server or cloud account is required for desktop use.
 
@@ -95,11 +95,11 @@ By default files are saved under `~/Pictures/SnagForge`. The library only scans 
 1. Open **Screen recorder**.
 2. Choose **MP4 video** or **MP3 audio**.
 3. Choose **None**, **Microphone**, or **System audio**. MP3 requires an audio source.
-4. For video, enable **Marquee desktop area**.
+4. Under **Capture area**, choose **Selected area** or **Full screen/window**.
 5. Optionally set a delay and click **Select area & record**. The native interface also supports **Ctrl+Shift+R**.
 6. Approve the desktop screen/window picker. The recording will auto-save under `~/Pictures/SnagForge`.
-7. Drag the crosshair marquee on the full-screen desktop overlay. The displayed dimensions map to source pixels and only that rectangle is encoded. Press **Enter** to record the whole approved source or **Esc** to cancel.
-8. Restore SnagForge and click **Stop & save**. Wait for the file to finalize, then verify playback.
+7. Drag the crosshair marquee on the full-screen desktop overlay. The rectangle remains visible after release so you can redraw it. Click **Record selected area** to confirm, press **Enter** to confirm the current selection, choose **Use full source**, or press **Esc** to cancel.
+8. A small always-on-top controller displays elapsed recording time. Click **Stop & save**, wait for finalization, then verify playback.
 
 Current video encoding uses software x264 / H.264, MP4 and 30 fps. Audio in MP4 uses AAC; audio-only export uses MP3. Hardware encoding, 60 fps, webcam overlays, pause/resume, audio meters, simultaneous microphone/system mixing, noise reduction and built-in video trimming are not implemented.
 

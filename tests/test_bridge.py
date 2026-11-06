@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QApplication,QMainWindow
 from PySide6.QtGui import QImage,QColor
 from PySide6.QtCore import QUrl
 from web_shell import decode_image,encode_image,DesktopBridge,EngineWindow,LocalPage,ROOT
+from app import RecordingController
 
 app=QApplication.instance() or QApplication([])
 
@@ -48,5 +49,9 @@ class BridgeTests(unittest.TestCase):
         engine=EngineWindow();shell=QMainWindow();engine.shell=shell
         self.assertIs(engine.dialog_host(),shell)
         engine.timer.stop();engine.shell=None;engine.close();shell.close()
+    def test_recording_controller_shows_elapsed_time_and_stops(self):
+        stopped=[];control=RecordingController(lambda:stopped.append(True))
+        control.set_elapsed(65);self.assertEqual(control.elapsed.text(),'01:05')
+        control.stop_button.click();self.assertEqual(stopped,[True]);control.close()
 
 if __name__=='__main__':unittest.main()
