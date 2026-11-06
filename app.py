@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
 from editor import Canvas, RegionDialog
 from workers import CaptureWorker, Recorder
 from media import stitch, recording_crop
-from ui import STYLE, icon, action_button, caption, field, ReferenceWindow
+from ui import STYLE, icon, application_icon, action_button, caption, field, ReferenceWindow
 from instance import InstanceGuard
 
 CAPTURES=Path.home()/'Pictures'/'SnagForge'
@@ -133,7 +133,7 @@ class Window(QMainWindow):
         shell.addWidget(sidebar)
         side=QVBoxLayout(sidebar);side.setContentsMargins(20,26,18,18);side.setSpacing(9)
         brandrow=QHBoxLayout();brandrow.setSpacing(10)
-        logo=QLabel();logo.setObjectName('logo');logo.setPixmap(icon('capture','#ffffff',23).pixmap(23,23));brandrow.addWidget(logo)
+        logo=QLabel();logo.setObjectName('logo');logo.setPixmap(application_icon().pixmap(44,44));logo.setStyleSheet('background:transparent;padding:0;');brandrow.addWidget(logo)
         brandcol=QVBoxLayout();brandcol.setSpacing(3)
         brand=QLabel('SnagForge');brand.setObjectName('brand');brandcol.addWidget(brand)
         sub=QLabel('CAPTURE. CREATE. SHARE.');sub.setObjectName('sideSub');brandcol.addWidget(sub)
@@ -503,8 +503,11 @@ def main():
     # desktop ID after Qt has already contacted the host portal is rejected.
     configure_application_identity()
     app=QApplication.instance() or QApplication(sys.argv)
+    app.setWindowIcon(application_icon())
     guard=InstanceGuard(app)
     if not guard.primary:return 0
+    from branding import register_desktop_icon
+    register_desktop_icon()
     if '--native' not in sys.argv and (Path(__file__).parent/'frontend'/'dist'/'index.html').is_file():
         from web_shell import run
         return run(guard)

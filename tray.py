@@ -2,14 +2,14 @@
 from PySide6.QtCore import QObject, QTimer
 from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
-from ui import icon
+from ui import application_icon
 
 
 class TrayController(QObject):
     def __init__(self,window,engine,app):
         super().__init__(window)
         self.window=window;self.engine=engine;self.app=app;self.quitting=False
-        self.icon=QSystemTrayIcon(icon('capture','#d45d00',32),self)
+        self.icon=QSystemTrayIcon(application_icon(),self)
         window.setWindowIcon(self.icon.icon())
         self.icon.setToolTip('SnagForge — Capture. Annotate. Explain.')
         self.menu=QMenu(window)

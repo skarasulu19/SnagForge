@@ -3,6 +3,10 @@ from PySide6.QtCore import Qt, QByteArray, QSize
 from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QPushButton, QLabel, QVBoxLayout, QWidget, QDialog
+from branding import ICON
+
+def application_icon():
+    return QIcon(str(ICON)) if ICON.is_file() else icon('capture','#d45d00',32)
 
 PATHS = {
     'capture': '<path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m8 0h3a2 2 0 0 0 2-2v-3"/><rect x="7" y="7" width="10" height="10" rx="2"/>',

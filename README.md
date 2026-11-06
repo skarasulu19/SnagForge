@@ -26,7 +26,7 @@ Install dependencies only on the Ubuntu computer where you want to run the app. 
 
 ## What changed in 0.3.3
 
-- An orange and charcoal interface with an author credit for **Sinan Ozgu Karasulu**.
+- An orange and charcoal interface with an author credit for **Sinan Ozgu Karasulu**, plus a folded-S app icon used in the sidebar, tray, window and desktop launcher.
 - **Copy file path** and **Delete** in Capture library. Delete confirms before moving files to Trash; active captures cannot be deleted. The native recent-export list offers these actions in its right-click menu.
 - High-quality H.264 recording at the captured source dimensions and 30 fps, using constant-quality Q18 encoding with a 50 Mbps ceiling. Files can be larger than earlier recordings; live encoder validation is still required.
 - Video area selection uses the existing window and locks the rectangle when the mouse is released. Errors restore the application and request foreground focus with **OK** selected.
@@ -162,5 +162,5 @@ Sinan Ozgu Karasulu
 
 ## Checks
 
-The current Python suite has 39 passing tests and one local-socket integration test skipped in restricted environments. The actual Angular desktop window was exercised with synthetic images: startup, native bridge synchronization, rectangle annotation, native clipboard copy, undo/redo, and three rendered UI screenshots. Live Ubuntu 26 screen/audio recording remains unverified. See [validation](docs/VALIDATION.md) and the [Snagit + ShareX hybrid roadmap](docs/HYBRID_ROADMAP.md).
+The current Python suite has 42 passing tests and one local-socket integration test skipped in restricted environments. The actual Angular desktop window was exercised with synthetic images: startup, native bridge synchronization, rectangle annotation, native clipboard copy, undo/redo, and three rendered UI screenshots. Live Ubuntu 26 screen/audio recording remains unverified. See [validation](docs/VALIDATION.md) and the [Snagit + ShareX hybrid roadmap](docs/HYBRID_ROADMAP.md).
 

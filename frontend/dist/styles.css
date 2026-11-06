@@ -24,3 +24,5 @@ nav button{font-size:12px}.side-caption{font-size:10px}.eyebrow{font-size:9px}.p
 .library-row{display:flex;align-items:center;gap:16px;border-bottom:1px solid #e3e3e3;padding:12px 0}.library-row:hover{background:#fff8f1}
 .capture-open{display:flex;align-items:center;gap:14px;flex:1;min-width:0;padding:8px;border:0;background:none;text-align:left;color:#555}.capture-name{min-width:0}.capture-name strong{overflow-wrap:anywhere}.capture-actions{display:flex;gap:8px;flex:none}.capture-actions .btn{font-size:11px;padding:8px 11px;min-height:34px}.delete-capture{color:#a12f24;border-color:#e0c8c4}.delete-capture:hover{background:#fff0ed;border-color:#c66b5f}.library-list small{color:#737373}.library-icon{color:#b75100;background:#fff0df}
 @media(max-width:1100px){.library-row{flex-wrap:wrap;gap:4px}.capture-actions{padding:0 8px 8px 64px}.author-credit{font-size:9px}}
+
+.brand-mark{background:none;box-shadow:none}.brand-mark img{width:48px;height:48px;object-fit:contain;display:block}
