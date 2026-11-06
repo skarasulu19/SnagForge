@@ -1,5 +1,6 @@
 """Desktop portal client. Capture permission stays with the desktop compositor."""
 import asyncio
+import logging
 import uuid
 from dbus_next import Message, MessageType, Variant
 from dbus_next.aio import MessageBus
@@ -22,41 +23,74 @@ class Portal:
             raise RuntimeError(f'{reply.error_name}: {reply.body}')
         return reply
 
-    async def request(self, interface, member, signature, body, options):
-        token = 'snagforge_' + uuid.uuid4().hex
-        options = dict(options, handle_token=Variant('s', token))
-        sender = self.bus.unique_name[1:].replace('.', '_')
-        path = f'{ROOT}/request/{sender}/{token}'
-        future = asyncio.get_running_loop().create_future()
-        def receive(msg):
-            if (msg.message_type == MessageType.SIGNAL and msg.path == path
-                and msg.interface == 'org.freedesktop.portal.Request' and msg.member == 'Response'):
-                if not future.done():
-                    future.set_result(msg.body)
-        self.bus.add_message_handler(receive)
-        rule = f"type='signal',interface='org.freedesktop.portal.Request',path='{path}'"
+    request_timeout=180
+    cleanup_timeout=2
+
+    async def close_request(self,path):
+        # Requests may disappear before a timeout/cancel reaches cleanup.
         try:
-            match = await self.bus.call(Message(destination='org.freedesktop.DBus',
-                path='/org/freedesktop/DBus', interface='org.freedesktop.DBus',
-                member='AddMatch', signature='s', body=[rule]))
-            if match.message_type == MessageType.ERROR:
-                raise RuntimeError(str(match.body))
-            await self.call(interface, member, signature, body + [options])
-            try:
-                code, result = await asyncio.wait_for(future, 180)
-            except asyncio.TimeoutError:
-                await self.call('org.freedesktop.portal.Request', 'Close', path=path)
-                raise RuntimeError('Capture picker timed out. Try again.')
-            if code == 1:
-                raise Cancelled('Capture cancelled')
-            if code:
-                raise RuntimeError(f'Desktop rejected the capture (response {code}).')
-            return {k: v.value for k, v in result.items()}
+            await asyncio.wait_for(self.call('org.freedesktop.portal.Request','Close',path=path),self.cleanup_timeout)
+        except Exception:
+            pass
+
+    async def request(self, interface, member, signature, body, options):
+        stage=interface.rsplit('.',1)[-1]+'.'+member
+        token='snagforge_'+uuid.uuid4().hex
+        options=dict(options,handle_token=Variant('s',token))
+        sender=self.bus.unique_name[1:].replace('.','_')
+        path=f'{ROOT}/request/{sender}/{token}'
+        actual=None;buffered={}
+        future=asyncio.get_running_loop().create_future()
+        def receive(msg):
+            if (msg.message_type!=MessageType.SIGNAL or
+                msg.interface!='org.freedesktop.portal.Request' or msg.member!='Response'):
+                return
+            if actual is None:
+                if msg.path and msg.path.startswith(ROOT+'/request/'):
+                    buffered[msg.path]=msg.body
+            elif msg.path==actual and not future.done():
+                future.set_result(msg.body)
+        self.bus.add_message_handler(receive)
+        # Subscribe before calling, including replies whose returned handle
+        # differs from the predicted handle. Correlate only the returned path.
+        rule=(f"type='signal',sender='{DEST}',interface='org.freedesktop.portal.Request',"
+              f"member='Response',path_namespace='{ROOT}/request'")
+        matched=False
+        logging.info('Portal %s: requesting',stage)
+        try:
+            match=await self.bus.call(Message(destination='org.freedesktop.DBus',
+                path='/org/freedesktop/DBus',interface='org.freedesktop.DBus',
+                member='AddMatch',signature='s',body=[rule]))
+            if match.message_type==MessageType.ERROR:raise RuntimeError(str(match.body))
+            matched=True
+            reply=await asyncio.wait_for(self.call(interface,member,signature,body+[options]),self.request_timeout)
+            returned=reply.body[0] if reply.body else None
+            if not isinstance(returned,str) or not returned.startswith(ROOT+'/request/'):
+                raise RuntimeError(stage+' returned an invalid request handle.')
+            path=actual=returned
+            if actual in buffered and not future.done():future.set_result(buffered[actual])
+            buffered.clear()
+            code,result=await asyncio.wait_for(future,self.request_timeout)
+            if code==1:raise Cancelled('Capture cancelled')
+            if code:raise RuntimeError(f'{stage} failed (desktop response {code}).')
+            logging.info('Portal %s: completed',stage)
+            return {k:v.value for k,v in result.items()}
+        except asyncio.TimeoutError:
+            await self.close_request(path)
+            raise RuntimeError(f'{stage} timed out waiting for Ubuntu. Cancel any open capture picker and try again.') from None
+        except asyncio.CancelledError:
+            await self.close_request(path)
+            logging.info('Portal %s: cancelled',stage)
+            raise
         finally:
             self.bus.remove_message_handler(receive)
-            await self.bus.call(Message(destination='org.freedesktop.DBus',
-                path='/org/freedesktop/DBus', interface='org.freedesktop.DBus',
-                member='RemoveMatch', signature='s', body=[rule]))
+            if matched:
+                try:
+                    await asyncio.wait_for(self.bus.call(Message(destination='org.freedesktop.DBus',
+                        path='/org/freedesktop/DBus',interface='org.freedesktop.DBus',
+                        member='RemoveMatch',signature='s',body=[rule])),self.cleanup_timeout)
+                except Exception:
+                    pass
 
     async def screenshot(self):
         return (await self.request('org.freedesktop.portal.Screenshot', 'Screenshot',
@@ -91,7 +125,7 @@ class Portal:
         try:
             if bus and session:
                 try:
-                    await self.call('org.freedesktop.portal.Session', 'Close', path=session)
+                    await asyncio.wait_for(self.call('org.freedesktop.portal.Session','Close',path=session),self.cleanup_timeout)
                 except Exception:
                     # Session.Close is cleanup only.  The compositor is allowed
                     # to destroy the object first, and a disconnected session
@@ -104,3 +138,4 @@ class Portal:
                 except Exception:
                     pass
             self.bus = None
+

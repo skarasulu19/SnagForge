@@ -73,9 +73,9 @@ class Canvas(QWidget):
 
     def paintEvent(self, e):
         p=QPainter(self)
-        p.fillRect(self.rect(), QColor('#111723'))
+        p.fillRect(self.rect(), QColor('#1a1a1a'))
         if self.image.isNull():
-            p.setPen(QColor('#a5b2c7'))
+            p.setPen(QColor('#b6b6b6'))
             p.setFont(QFont('Sans', 16))
             p.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter,
                        'Capture something worth explaining.\n\nNew capture · Open image · Paste from clipboard')
@@ -213,11 +213,13 @@ class RegionSelector(QWidget):
     confirmed = Signal(QRect)
     full_source = Signal()
     cancelled = Signal()
+    selection_started = Signal()
 
     def __init__(self,image,parent=None):
         super().__init__(parent)
         self.image=image.convertToFormat(QImage.Format.Format_ARGB32)
         self.start=None;self.end=None;self.pointer=None
+        self.dragging=False
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setCursor(Qt.CursorShape.CrossCursor)
@@ -248,7 +250,7 @@ class RegionSelector(QWidget):
                       source.width()*scale,source.height()*scale)
 
     def paintEvent(self,event):
-        painter=QPainter(self);painter.fillRect(self.rect(),QColor('#080d18'))
+        painter=QPainter(self);painter.fillRect(self.rect(),QColor('#101010'))
         target=self.image_rect()
         if target.isEmpty():return
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
@@ -258,20 +260,22 @@ class RegionSelector(QWidget):
             painter.fillRect(target,QColor(4,8,18,145))
             destination=self.target_rect(source)
             painter.drawImage(destination,self.image,QRectF(source))
-            painter.setPen(QPen(QColor('#8f7cff'),3))
+            painter.setPen(QPen(QColor('#f5b486'),3))
             painter.drawRect(destination)
             label=f'{source.width():,} × {source.height():,}'
             metrics=painter.fontMetrics();label_width=metrics.horizontalAdvance(label)+24
             label_box=QRectF(destination.x(),max(12,destination.y()-38),label_width,28)
-            painter.setPen(Qt.PenStyle.NoPen);painter.setBrush(QColor('#7864ef'))
+            painter.setPen(Qt.PenStyle.NoPen);painter.setBrush(QColor('#ef9e64'))
             painter.drawRoundedRect(label_box,6,6)
             painter.setPen(Qt.GlobalColor.white)
             painter.drawText(label_box,Qt.AlignmentFlag.AlignCenter,label)
-        if self.pointer is not None and target.contains(self.pointer):
+        if self.pointer is not None and (self.dragging or source.isEmpty()) and target.contains(self.pointer):
             painter.setPen(QPen(QColor(255,255,255,125),1,Qt.PenStyle.DashLine))
             painter.drawLine(QPointF(target.left(),self.pointer.y()),QPointF(target.right(),self.pointer.y()))
             painter.drawLine(QPointF(self.pointer.x(),target.top()),QPointF(self.pointer.x(),target.bottom()))
-        hint='DRAG TO SELECT   •   ENTER: FULL SOURCE   •   ESC: CANCEL'
+        hint=('RELEASE TO SET AREA' if self.dragging else
+              'AREA SET   •   ENTER: CONFIRM   •   DRAG AGAIN TO REDRAW' if not source.isEmpty() else
+              'DRAG TO SELECT   •   ENTER: FULL SOURCE')+'   •   ESC: CANCEL'
         metrics=painter.fontMetrics();width=metrics.horizontalAdvance(hint)+38
         box=QRectF((self.width()-width)/2,20,width,38)
         painter.setPen(Qt.PenStyle.NoPen);painter.setBrush(QColor(17,24,39,225))
@@ -282,17 +286,21 @@ class RegionSelector(QWidget):
         if event.button()==Qt.MouseButton.RightButton:
             self.cancelled.emit();return
         if event.button()!=Qt.MouseButton.LeftButton or not self.image_rect().contains(event.position()):return
+        self.dragging=True
         self.start=event.position();self.end=event.position();self.pointer=event.position()
-        self.setFocus(Qt.FocusReason.MouseFocusReason);self.grabMouse();self.update()
+        self.selection_started.emit()
+        # Qt implicitly grabs the mouse for the widget receiving the press.
+        # Explicit grabs are unsupported on some Wayland compositors.
+        self.setFocus(Qt.FocusReason.MouseFocusReason);self.update()
 
     def mouseMoveEvent(self,event):
         self.pointer=event.position()
-        if self.start is not None:self.end=event.position()
+        if self.dragging:self.end=event.position()
         self.update()
 
     def mouseReleaseEvent(self,event):
-        if event.button()!=Qt.MouseButton.LeftButton or self.start is None:return
-        self.releaseMouse()
+        if event.button()!=Qt.MouseButton.LeftButton or not self.dragging:return
+        self.dragging=False
         self.end=event.position();region=self.selection();self.update()
         if region.width()>1 and region.height()>1:self.selected.emit(region)
         else:self.start=None;self.end=None
@@ -300,28 +308,35 @@ class RegionSelector(QWidget):
     def keyPressEvent(self,event):
         if event.key()==Qt.Key.Key_Escape:self.cancelled.emit()
         elif event.key() in (Qt.Key.Key_Return,Qt.Key.Key_Enter):
+            if self.dragging:return
             region=self.selection()
             if region.width()>1 and region.height()>1:self.confirmed.emit(region)
             else:self.full_source.emit()
         else:super().keyPressEvent(event)
 
 class RegionDialog(QDialog):
-    def __init__(self,image,parent=None,confirm_text='Use selected area'):
+    def __init__(self,image,parent=None,confirm_text='Use selected area',embedded=False):
         super().__init__(parent)
         self.setWindowTitle('SnagForge · Select desktop region')
-        self.setWindowFlags(Qt.WindowType.Dialog|Qt.WindowType.FramelessWindowHint|Qt.WindowType.WindowStaysOnTopHint)
-        self.setWindowModality(Qt.WindowModality.ApplicationModal)
-        self.setWindowState(self.windowState()|Qt.WindowState.WindowFullScreen)
+        # Keep the selector with its owning app rather than adding another
+        # task-switcher entry while the user is trying to choose an area.
+        if embedded:
+            self.setParent(parent,Qt.WindowType.Widget)
+        else:
+            self.setWindowFlags(Qt.WindowType.Tool|Qt.WindowType.FramelessWindowHint|Qt.WindowType.WindowStaysOnTopHint)
+            self.setWindowModality(Qt.WindowModality.ApplicationModal)
+            self.setWindowState(self.windowState()|Qt.WindowState.WindowFullScreen)
         self.region=None
         layout=QVBoxLayout(self);layout.setContentsMargins(0,0,0,0);layout.setSpacing(0)
         self.selector=RegionSelector(image,self);self.canvas=self.selector
         self.selector.selected.connect(self.preview_selection)
+        self.selector.selection_started.connect(self.begin_selection)
         self.selector.confirmed.connect(self.choose)
         self.selector.full_source.connect(self.accept)
         self.selector.cancelled.connect(self.reject)
         layout.addWidget(self.selector,1)
         actions=QHBoxLayout();actions.setContentsMargins(18,12,18,12);actions.setSpacing(10)
-        hint=QLabel('Drag to select. Redraw as needed, then confirm.');hint.setStyleSheet('color:#64748b;')
+        hint=QLabel('Drag, release to set the box, then confirm.');hint.setStyleSheet('color:#787878;')
         actions.addWidget(hint);actions.addStretch()
         cancel=QPushButton('Cancel');cancel.clicked.connect(self.reject);actions.addWidget(cancel)
         full=QPushButton('Use full source');full.clicked.connect(self.use_full_source);actions.addWidget(full)
@@ -330,7 +345,14 @@ class RegionDialog(QDialog):
         self.confirm_button.clicked.connect(self.confirm_selection);actions.addWidget(self.confirm_button)
         layout.addLayout(actions)
     def showEvent(self,event):
-        super().showEvent(event);self.selector.setFocus(Qt.FocusReason.ActiveWindowFocusReason)
+        super().showEvent(event)
+        self.raise_()
+        host=self.window();host.activateWindow()
+        if host.windowHandle():host.windowHandle().requestActivate()
+        self.selector.setFocus(Qt.FocusReason.ActiveWindowFocusReason)
+    def begin_selection(self):
+        self.region=None;self.confirm_button.setEnabled(False)
+        self.confirm_button.setText(self.confirm_button.text().split('  ·  ')[0])
     def choose(self,rect):
         self.region=rect
         self.accept()
@@ -341,3 +363,4 @@ class RegionDialog(QDialog):
         if self.region and self.region.width()>1 and self.region.height()>1:self.accept()
     def use_full_source(self):
         self.region=None;self.accept()
+

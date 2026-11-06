@@ -28,6 +28,8 @@ interface Bridge {
   listRecent:(callback:(data:string)=>void)=>void;
   openRecent:(name:string)=>void;
   openFolder:()=>void;
+  copyPath:(name:string)=>void;
+  deleteRecent:(name:string)=>void;
   manual:()=>void;
   syncImage:(data:string)=>void;
 }
@@ -37,13 +39,14 @@ declare global {interface Window {qt?:{webChannelTransport:unknown};QWebChannel?
 export class AppComponent implements AfterViewInit {
   @ViewChild('canvas') canvasRef!:ElementRef<HTMLCanvasElement>;
   @ViewChild('fileInput') fileInput!:ElementRef<HTMLInputElement>;
-  page=signal('editor');tool=signal('Arrow');color=signal('#7764f2');stroke=signal(5);
+  page=signal('editor');tool=signal('Arrow');color=signal('#c35400');stroke=signal(5);
   connected=signal(false);hasImage=signal(false);imageName=signal('Untitled capture');dirty=signal(false);
   width=signal(0);height=signal(0);notice=signal('');recording=signal(false);busy=signal(false);elapsed=signal('00:00');
+  stopping=signal(false);
   mode=signal('MP4 video');audio=signal('Microphone');region=signal(true);delay=signal(0);format=signal('png');
   workflow=signal(localStorage.getItem('snagforge.workflow')||'editor');recent=signal<Recent[]>([]);query=signal('');
   tools=['Arrow','Pen','Rectangle','Ellipse','Line','Text','Callout','Step','Stamp','Highlight','Pixelate','Blur','Redact','Spotlight','Magnify','Capture Info','Crop'];
-  colors=['#7764f2','#ff795e','#38b693','#f3b845','#24334b'];history:string[]=[];future:string[]=[];
+  colors=['#c35400','#ff795e','#38b693','#f3b845','#24334b'];history:string[]=[];future:string[]=[];
   historySize=signal(0);futureSize=signal(0);zoom=signal(100);demo=signal(false);textOpen=signal(false);textValue='';resizeOpen=signal(false);resizeValue=1200;
   bridge?:Bridge;drawing=false;points:Point[]=[];backup?:ImageData;before='';step=1;timer?:ReturnType<typeof setTimeout>;
   get canvas(){return this.canvasRef.nativeElement;}
@@ -53,7 +56,7 @@ export class AppComponent implements AfterViewInit {
       new window.QWebChannel(window.qt.webChannelTransport,channel=>{
         this.bridge=channel.objects.bridge;this.connected.set(true);
         this.bridge.imageReady.connect(data=>{this.page.set('editor');this.demo.set(false);this.load(data,'New capture',true);});
-        this.bridge.stateChanged.connect(data=>{const s=JSON.parse(data);const wasBusy=this.busy();this.busy.set(s.busy);this.recording.set(s.recording);this.elapsed.set(s.elapsed||'00:00');if(s.message)this.toast(s.message);if(s.message||(wasBusy&&!s.busy))this.refresh();});
+        this.bridge.stateChanged.connect(data=>{const s=JSON.parse(data);const wasBusy=this.busy();this.busy.set(s.busy);this.stopping.set(!!s.stopping);this.recording.set(s.recording);this.elapsed.set(s.elapsed||'00:00');if(s.message)this.toast(s.message);if(s.message||(wasBusy&&!s.busy))this.refresh();});
         this.refresh();
       });
     }
@@ -119,7 +122,7 @@ export class AppComponent implements AfterViewInit {
     else if(t==='Blur'&&r.w&&r.h){const part=document.createElement('canvas');part.width=r.w;part.height=r.h;part.getContext('2d')!.drawImage(this.canvas,r.x,r.y,r.w,r.h,0,0,r.w,r.h);c.beginPath();c.rect(r.x,r.y,r.w,r.h);c.clip();c.filter='blur('+Math.max(3,this.stroke())+'px)';c.drawImage(part,r.x,r.y);}
     else if(t==='Magnify'&&r.w>3&&r.h>3){const sx=r.x+r.w*.25,sy=r.y+r.h*.25;c.drawImage(this.canvas,sx,sy,r.w*.5,r.h*.5,r.x,r.y,r.w,r.h);c.strokeStyle=this.color();c.lineWidth=Math.max(3,this.stroke());c.strokeRect(r.x,r.y,r.w,r.h);}
     else if(t==='Capture Info'){const w=Math.min(this.canvas.width,Math.max(300,r.w)),h=Math.min(this.canvas.height,Math.max(74,r.h)),x=Math.max(0,Math.min(r.x,this.canvas.width-w)),y=Math.max(0,Math.min(r.y,this.canvas.height-h)),date=new Date().toLocaleString();c.fillStyle='rgba(16,24,39,.9)';c.beginPath();c.roundRect(x,y,w,h,10);c.fill();c.fillStyle='#fff';c.font='bold '+Math.max(14,this.stroke()*3)+'px sans-serif';c.fillText('Ubuntu  •  '+date,x+14,y+28);c.font=Math.max(12,this.stroke()*2.5)+'px sans-serif';c.fillText(this.canvas.width+' × '+this.canvas.height+' px  •  SnagForge',x+14,y+54);}
-    else if(t==='Crop'){c.setLineDash([8,5]);c.strokeStyle='#7764f2';c.strokeRect(r.x,r.y,r.w,r.h);}
+    else if(t==='Crop'){c.setLineDash([8,5]);c.strokeStyle='#c35400';c.strokeRect(r.x,r.y,r.w,r.h);}
     c.restore();
   }
   applyText(){if(this.textValue.trim()){const c=this.context,a=this.points[0];if(this.tool()==='Callout'){const w=Math.min(320,this.canvas.width),h=Math.min(120,this.canvas.height),x=Math.max(0,Math.min(a.x,this.canvas.width-w)),y=Math.max(0,Math.min(a.y,this.canvas.height-h-24));c.fillStyle=this.color();c.beginPath();c.roundRect(x,y,w,h,14);c.fill();c.beginPath();c.moveTo(x+30,y+h);c.lineTo(x+54,y+h);c.lineTo(x+28,y+h+Math.min(24,this.canvas.height-y-h));c.closePath();c.fill();c.fillStyle='#fff';c.font='bold '+Math.max(17,this.stroke()*4)+'px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(this.textValue.trim(),x+w/2,y+h/2,w-28);}else{c.fillStyle=this.color();c.font=Math.max(20,this.stroke()*5)+'px sans-serif';this.textValue.split('\n').forEach((line,i)=>c.fillText(line,a.x,a.y+i*Math.max(25,this.stroke()*6)));}this.checkpoint(this.before);}this.textOpen.set(false);}
@@ -147,6 +150,8 @@ export class AppComponent implements AfterViewInit {
   filteredRecent(){const q=this.query().toLowerCase();return this.recent().filter(r=>r.name.toLowerCase().includes(q));}
   openRecent(item:Recent){this.bridge?.openRecent(item.name);}
   folder(){if(this.bridge)this.bridge.openFolder();else this.toast('The desktop app saves to Pictures/SnagForge.');}
+  copyPath(item:Recent){if(this.bridge)this.bridge.copyPath(item.name);else this.toast('File paths are available in the desktop application.');}
+  deleteRecent(item:Recent){if(this.bridge)this.bridge.deleteRecent(item.name);else this.toast('Deleting captures is available in the desktop application.');}
   manual(){if(this.bridge)this.bridge.manual();else this.toast('The illustrated manual is included in the repository under docs/.');}
   demoImage(){
     if(this.dirty()&&!window.confirm('Replace the current image with the example?'))return;
@@ -165,3 +170,4 @@ export class AppComponent implements AfterViewInit {
     if(event.ctrlKey||event.metaKey){const key=event.key.toLowerCase();if(['z','s','o','c','v','n'].includes(key))event.preventDefault();if(key==='z')event.shiftKey?this.redo():this.undo();if(key==='s')this.exportImage();if(key==='o')this.chooseFile();if(key==='c')this.copy();if(key==='v')this.paste();if(key==='n')this.capture();}
   }
 }
+

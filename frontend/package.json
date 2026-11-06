@@ -1,6 +1,6 @@
 {
   "name": "snagforge-desktop-ui",
-  "version": "0.3.2-alpha",
+  "version": "0.3.5-alpha",
   "private": true,
   "scripts": {
     "build": "ngc -p tsconfig.json && node build.mjs",
@@ -23,3 +23,4 @@
     "@babel/core": "8.0.1"
   }
 }
+

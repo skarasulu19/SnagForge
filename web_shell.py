@@ -64,6 +64,7 @@ class DesktopBridge(QObject):
     def notify(self,message=''):
         elapsed=0 if self.engine.recording_since is None else int(time.monotonic()-self.engine.recording_since)
         self.stateChanged.emit(json.dumps({'busy':self.engine.busy,'recording':self.engine.recording_since is not None,
+            'stopping':self.engine.stopping,
             'elapsed':f'{elapsed//60:02}:{elapsed%60:02}','message':message}))
 
     def image_changed(self):
@@ -165,6 +166,14 @@ class DesktopBridge(QObject):
     @Slot()
     def openFolder(self):self.engine.open_folder()
 
+    @Slot(str)
+    def copyPath(self,name):
+        if self.engine.copy_capture_path(name):self.notify('File path copied to clipboard.')
+
+    @Slot(str)
+    def deleteRecent(self,name):
+        if self.engine.delete_capture(name):self.notify('Capture moved to Trash.')
+
     @Slot()
     def manual(self):self.engine.manual()
 
@@ -182,14 +191,20 @@ class DesktopWindow(QMainWindow):
         self.channel.registerObject('bridge',self.bridge);self.page.setWebChannel(self.channel)
         self.view.load(QUrl.fromLocalFile(str(ROOT/'frontend/dist/index.html')))
     def closeEvent(self,event):
+        if getattr(self,'tray_controller',None) and self.tray_controller.hide_on_close():
+            event.ignore();return
         if self.engine.busy:
             self.engine.error('Stop the active recording and wait for it to finish before closing.');event.ignore();return
         if not self.engine.can_replace():event.ignore();return
         for pin in list(self.engine.pins):pin.close()
         event.accept()
 
-def run():
+def run(guard=None):
     configure_application_identity()
     app=QApplication.instance() or QApplication([])
     window=DesktopWindow();window.show()
+    if guard:guard.set_window(window)
+    from tray import TrayController
+    window.tray_controller=TrayController(window,window.engine,app)
     return app.exec()
+

@@ -72,6 +72,46 @@ class RegionSelectorTests(unittest.TestCase):
         QTest.keyClick(self.selector,Qt.Key.Key_Return);QTest.keyClick(self.selector,Qt.Key.Key_Escape)
         QTest.mouseClick(self.selector,Qt.MouseButton.RightButton,pos=QPoint(300,300))
         self.assertEqual(events,['full','cancel','cancel'])
+    def test_release_locks_marquee_while_pointer_moves_to_confirm(self):
+        regions=[];self.selector.selected.connect(regions.append)
+        QTest.mousePress(self.selector,Qt.MouseButton.LeftButton,pos=QPoint(100,100))
+        QTest.mouseMove(self.selector,QPoint(500,400))
+        QTest.mouseRelease(self.selector,Qt.MouseButton.LeftButton,pos=QPoint(500,400))
+        locked=self.selector.selection()
+        QTest.mouseMove(self.selector,QPoint(750,550))
+        QTest.mouseMove(self.selector,QPoint(30,80))
+        self.assertEqual(self.selector.selection(),locked)
+        self.assertEqual(regions,[locked])
+        confirmed=[];self.selector.confirmed.connect(confirmed.append)
+        QTest.keyClick(self.selector,Qt.Key.Key_Return)
+        self.assertEqual(confirmed,[locked])
+    def test_redraw_requires_another_press_and_release(self):
+        QTest.mousePress(self.selector,Qt.MouseButton.LeftButton,pos=QPoint(100,100))
+        QTest.mouseRelease(self.selector,Qt.MouseButton.LeftButton,pos=QPoint(500,400))
+        QTest.mousePress(self.selector,Qt.MouseButton.LeftButton,pos=QPoint(200,200))
+        QTest.mouseMove(self.selector,QPoint(400,350))
+        confirmed=[];self.selector.confirmed.connect(confirmed.append)
+        QTest.keyClick(self.selector,Qt.Key.Key_Return)
+        self.assertEqual(confirmed,[])
+        QTest.mouseRelease(self.selector,Qt.MouseButton.LeftButton,pos=QPoint(400,350))
+        self.assertEqual(self.selector.selection(),QRect(400,250,400,300))
+    def test_confirm_button_uses_locked_box_and_disables_during_redraw(self):
+        image=QImage(800,600,QImage.Format.Format_ARGB32);image.fill(Qt.GlobalColor.white)
+        dialog=RegionDialog(image,confirm_text='Record selected area');dialog.show();app.processEvents()
+        try:
+            selector=dialog.selector
+            QTest.mousePress(selector,Qt.MouseButton.LeftButton,pos=QPoint(100,100))
+            QTest.mouseRelease(selector,Qt.MouseButton.LeftButton,pos=QPoint(400,300))
+            self.assertTrue(dialog.confirm_button.isEnabled())
+            QTest.mousePress(selector,Qt.MouseButton.LeftButton,pos=QPoint(150,150))
+            self.assertFalse(dialog.confirm_button.isEnabled());self.assertIsNone(dialog.region)
+            QTest.mouseRelease(selector,Qt.MouseButton.LeftButton,pos=QPoint(350,300))
+            locked=selector.selection()
+            QTest.mouseMove(selector,QPoint(500,350))
+            QTest.mouseClick(dialog.confirm_button,Qt.MouseButton.LeftButton)
+            self.assertEqual(dialog.result(),QDialog.DialogCode.Accepted)
+            self.assertEqual(dialog.region,locked)
+        finally:dialog.close()
     def test_region_dialog_waits_for_explicit_confirmation(self):
         image=QImage(800,600,QImage.Format.Format_ARGB32);image.fill(Qt.GlobalColor.white)
         dialog=RegionDialog(image,confirm_text='Record selected area')
@@ -93,6 +133,8 @@ class MediaTests(unittest.TestCase):
         args=pipeline('/tmp/space name;$(bad).mp4','MP4 video',9,42,(10,20,30,40),'Microphone')
         self.assertIn('left=10',args);self.assertIn('bottom=40',args)
         self.assertIn('avenc_aac',args);self.assertIn('mp4mux',args)
+        self.assertIn('pass=qual',args);self.assertIn('quantizer=18',args)
+        self.assertNotIn('videoscale',args)
         self.assertIn('location="/tmp/space name;$(bad).mp4"',args)
         with self.assertRaises(ValueError):pipeline('/tmp/x.mp3','MP3 audio')
         self.assertIn('lamemp3enc',pipeline('/tmp/x.mp3','MP3 audio',audio='Microphone'))
@@ -117,7 +159,8 @@ class FakeBus:
             path='/org/freedesktop/portal/desktop/request/1_23/'+token,
             interface='org.freedesktop.portal.Request',member='Response',signature='ua{sv}',
             body=[self.code,{'uri':Variant('s','file:///tmp/test.png')}]))
-        return Message(message_type=MessageType.METHOD_RETURN,reply_serial=1)
+        return Message(message_type=MessageType.METHOD_RETURN,reply_serial=1,signature='o',
+            body=['/org/freedesktop/portal/desktop/request/1_23/'+token])
 
 class MissingSessionBus:
     """A portal bus whose compositor already removed the session object."""
@@ -155,4 +198,5 @@ class PortalTests(unittest.TestCase):
         asyncio.run(run())
 
 if __name__=='__main__':unittest.main()
+
 
