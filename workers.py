@@ -4,11 +4,28 @@ import signal
 import subprocess
 import tempfile
 import threading
+import logging
 from pathlib import Path
 from urllib.parse import urlparse, unquote
 from PySide6.QtCore import QThread, Signal
 from portal import Portal, Cancelled
 from media import pipeline, gst_string
+
+async def until_stopped(awaitable,stop_event):
+    """Let Stop cancel a portal wait instead of waiting for its 180s timeout."""
+    task=asyncio.create_task(awaitable)
+    try:
+        while not task.done():
+            if stop_event.is_set():raise Cancelled('Capture stopped')
+            await asyncio.wait((task,),timeout=.05)
+        result=await task
+        if stop_event.is_set():raise Cancelled('Capture stopped')
+        return result
+    finally:
+        if not task.done():
+            task.cancel()
+            try:await task
+            except asyncio.CancelledError:pass
 
 def recording_output_ok(path,returncode,details,stopped):
     """A user-stopped gst-launch may report SIGINT despite a valid finalized file."""
@@ -18,6 +35,8 @@ def recording_output_ok(path,returncode,details,stopped):
 class CaptureWorker(QThread):
     image = Signal(str)
     error = Signal(str)
+    def __init__(self):
+        super().__init__();self.stop_event=threading.Event()
     def run(self):
         try:
             asyncio.run(self.capture())
@@ -28,8 +47,8 @@ class CaptureWorker(QThread):
     async def capture(self):
         portal=None
         try:
-            portal=await Portal().connect()
-            uri=await portal.screenshot()
+            portal=Portal();await until_stopped(portal.connect(),self.stop_event)
+            uri=await until_stopped(portal.screenshot(),self.stop_event)
             parsed=urlparse(uri)
             if parsed.scheme!='file' or parsed.netloc not in ('','localhost'):
                 raise RuntimeError('The screenshot portal returned an unsupported URI.')
@@ -72,8 +91,9 @@ class Recorder(QThread):
         try:
             node=None
             if self.mode!='MP3 audio':
-                portal=await Portal().connect()
-                node=await portal.screencast()
+                portal=Portal();await until_stopped(portal.connect(),self.stop_event)
+                logging.info('Recorder: waiting for desktop permission')
+                node=await until_stopped(portal.screencast(),self.stop_event)
                 if self.region:
                     with tempfile.TemporaryDirectory(prefix='snagforge-preview-') as tmp:
                         fd=await portal.remote()
@@ -85,12 +105,15 @@ class Recorder(QThread):
                         with tempfile.TemporaryFile() as preview_log:
                             preview_process=subprocess.Popen(cmd,pass_fds=(fd,),stdout=preview_log,stderr=subprocess.STDOUT)
                             try:
-                                await asyncio.to_thread(preview_process.wait,20)
+                                await until_stopped(asyncio.to_thread(preview_process.wait,20),self.stop_event)
                             except subprocess.TimeoutExpired:
                                 preview_process.kill()
                                 await asyncio.to_thread(preview_process.wait)
                                 raise RuntimeError('The selected screen produced no preview. Try full-source recording.')
                             finally:
+                                if preview_process.poll() is None:
+                                    preview_process.kill()
+                                    await asyncio.to_thread(preview_process.wait)
                                 os.close(fd);fd=None
                             if preview_process.returncode:
                                 preview_log.seek(0)
@@ -98,6 +121,7 @@ class Recorder(QThread):
                         if not Path(path).is_file() or Path(path).stat().st_size<128:
                             raise RuntimeError('The selected desktop source did not produce a marquee preview.')
                         self.preview.emit(path)
+                        logging.info('Recorder: waiting for selected area')
                         while not self.selection_ready.is_set():
                             if self.stop_event.is_set():
                                 return
@@ -114,11 +138,13 @@ class Recorder(QThread):
                 # Catch immediate startup/plugin errors before showing Recording.
                 await asyncio.sleep(.7)
                 if process.poll() is None and not self.stop_event.is_set():
+                    logging.info('Recorder: encoder active (PID %s)',process.pid)
                     self.recording_active.emit()
                 while process.poll() is None and not self.stop_event.is_set():
                     await asyncio.sleep(.1)
                 stopped=self.stop_event.is_set()
                 if process.poll() is None:
+                    logging.info('Recorder: stopping encoder')
                     process.send_signal(signal.SIGINT)  # gst-launch -e writes EOS/trailer.
                     try:
                         await asyncio.to_thread(process.wait,20)
@@ -133,6 +159,7 @@ class Recorder(QThread):
                 if not stopped:
                     raise RuntimeError('Capture ended unexpectedly; check the saved file before using it.\n'+details)
                 self.saved.emit(self.path)
+                logging.info('Recorder: saved')
         except Cancelled:
             pass
         except Exception as e:
@@ -145,4 +172,5 @@ class Recorder(QThread):
                 os.close(fd)
             if portal:
                 await portal.close()
+            logging.info('Recorder: session released')
 

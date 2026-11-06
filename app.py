@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import sys
 import time
+import logging
 from pathlib import Path
 from datetime import datetime
 from PIL import Image
@@ -126,7 +127,8 @@ class Window(QMainWindow):
         self.setWindowTitle('SnagForge · Capture studio');self.resize(1520,940)
         self.setMinimumSize(1250,790)
         self.recorder=None;self.record_controller=None;self.capture_worker=None;self.busy=False;self.dirty=False
-        self.recording_since=None;self.pins=[]
+        self.recording_since=None;self.stopping=False;self.pins=[]
+        self.capture_cancelled=False;self.capture_in_progress=False;self.selecting_screenshot=False;self.screenshot_chooser=None
         root=QWidget();self.setCentralWidget(root)
         shell=QHBoxLayout(root);shell.setContentsMargins(0,0,0,0);shell.setSpacing(0)
         sidebar=QWidget();sidebar.setObjectName('sidebar');sidebar.setFixedWidth(222)
@@ -155,7 +157,7 @@ class Window(QMainWindow):
         side.addSpacing(14)
         privacy=QLabel('●  Local by default');privacy.setStyleSheet('color:#73c5ac;font-size:11px;padding:10px 0;');side.addWidget(privacy)
         side.addWidget(action_button('  Help & user manual','help',self.manual,'sideQuiet','#989898'))
-        foot=QHBoxLayout();version=QLabel('v0.3.4');version.setObjectName('sideSub');foot.addWidget(version)
+        foot=QHBoxLayout();version=QLabel('v0.3.5');version.setObjectName('sideSub');foot.addWidget(version)
         alpha=QLabel('ALPHA');alpha.setObjectName('alpha');foot.addWidget(alpha);foot.addStretch();side.addLayout(foot)
         author=QLabel('Author: Sinan Ozgu Karasulu');author.setWordWrap(True);author.setObjectName('sideSub');side.addWidget(author)
 
@@ -263,6 +265,8 @@ class Window(QMainWindow):
         return getattr(self,'shell',None) or self
 
     def error(self,message):
+        logging.error('SnagForge: %s',message)
+        if getattr(getattr(self.dialog_host(),'tray_controller',None),'quitting',False):return
         host=self.dialog_host()
         if host.isMinimized():
             host.setWindowState(host.windowState() & ~Qt.WindowState.WindowMinimized)
@@ -335,22 +339,32 @@ class Window(QMainWindow):
         self.dirty=False;self.image_title.setText(Path(path).name);self.image_info.setText(f'{self.canvas.image.width():,} × {self.canvas.image.height():,} px  ·  Saved');self.statusBar().showMessage(f'Exported {path}');self.refresh_recent();return True
     def capture(self):
         if self.busy or not self.can_replace():return
-        self.busy=True;self.capture_btn.setEnabled(False);self.hide()
+        self.busy=True;self.stopping=False;self.capture_cancelled=False;self.capture_in_progress=True;self.capture_btn.setEnabled(False);self.hide()
         QTimer.singleShot(max(450,self.delay.value()*1000),self.begin_capture)
     def begin_capture(self):
+        if self.capture_cancelled:self.end_capture();return
         self.capture_worker=CaptureWorker()
         self.capture_worker.image.connect(self.received_capture)
         self.capture_worker.error.connect(self.error)
         self.capture_worker.finished.connect(self.end_capture)
         self.capture_worker.start()
     def end_capture(self):
-        self.show();self.raise_();self.busy=False;self.capture_btn.setEnabled(True)
+        if not self.capture_in_progress:return
+        if self.selecting_screenshot:return
+        self.capture_in_progress=False
+        self.show();self.raise_();self.busy=False;self.stopping=False;self.capture_btn.setEnabled(True)
     def received_capture(self,path):
+        if self.capture_worker and self.capture_worker.stop_event.is_set():return
         self.show();self.raise_()
         image=QImage(path)
         if image.isNull():self.error('Screenshot could not be read.');return
         chooser=RegionDialog(image,self.dialog_host(),'Capture selected area')
-        if chooser.exec():self.load_image(image.copy(chooser.region) if chooser.region else image)
+        self.screenshot_chooser=chooser;self.selecting_screenshot=True
+        try:
+            if chooser.exec():self.load_image(image.copy(chooser.region) if chooser.region else image)
+        finally:
+            self.screenshot_chooser=None;self.selecting_screenshot=False
+            if self.capture_worker and not self.capture_worker.isRunning():self.end_capture()
     def scrolling(self):
         if self.busy or not self.can_replace():return
         self.busy=True
@@ -369,19 +383,28 @@ class Window(QMainWindow):
         # dialog when the Angular shell owns the visible desktop window.
         path=str(CAPTURES/f'recording-{datetime.now():%Y%m%d-%H%M%S-%f}.{suffix}')
         self.recorder=Recorder(path,mode,audio,self.region.isChecked())
+        self.stopping=False
         self.recorder.preview.connect(self.video_region)
         self.recorder.recording_active.connect(self.recording_started)
         self.recorder.saved.connect(self.recording_saved)
         self.recorder.error.connect(self.error)
         self.recorder.finished.connect(self.recording_finished)
         self.busy=True;self.record_btn.setEnabled(False);self.capture_btn.setEnabled(False);self.stop_btn.setEnabled(True)
+        self.stop_btn.setText('Cancel capture')
         self.update_record_action()
         self.statusBar().showMessage('Preparing capture · approve the desktop picker, then drag a marquee over the area to record')
         # Keep the app's existing surface available while the portal picker
         # opens. Restoring a minimized app later can lose activation on Wayland.
         if mode=='MP3 audio' or not self.region.isChecked():self.showMinimized()
-        QTimer.singleShot(max(450,self.delay.value()*1000),self.recorder.start)
+        recorder=self.recorder
+        def begin():
+            if recorder is not self.recorder:return
+            if recorder.stop_event.is_set():self.recording_finished()
+            else:recorder.start()
+        QTimer.singleShot(max(450,self.delay.value()*1000),begin)
     def video_region(self,path):
+        if self.recorder.stop_event.is_set():
+            self.recorder.cancelled=True;self.recorder.selection_ready.set();return
         image=QImage(path)
         if image.isNull():
             self.recorder.cancelled=True;self.recorder.selection_ready.set();return
@@ -408,24 +431,36 @@ class Window(QMainWindow):
         chooser.show();chooser.selector.setFocus(Qt.FocusReason.OtherFocusReason)
     def recording_started(self):
         if self.recording_since is not None:return
+        if self.recorder and self.recorder.stop_event.is_set():return
         self.recording_since=time.monotonic();self.record_badge.setText('RECORDING')
+        self.stop_btn.setText('Stop & save')
         self.record_controller=RecordingController(self.stop);self.record_controller.show();self.record_controller.raise_();self.tick()
     def tick(self):
-        if self.recording_since is not None:
+        if self.recording_since is not None and not self.stopping:
             elapsed=int(time.monotonic()-self.recording_since)
             self.record_badge.setText(f'RECORDING  {elapsed//60:02}:{elapsed%60:02}')
             if self.record_controller:self.record_controller.set_elapsed(elapsed)
             self.statusBar().showMessage(f'● Recording {elapsed//60:02}:{elapsed%60:02} · Restore SnagForge and press Stop & save')
     def stop(self):
+        self.stopping=self.busy
+        self.capture_cancelled=True
+        self.stop_btn.setText('Finalizing…' if self.recording_since is not None else 'Cancelling…')
+        if self.capture_worker:self.capture_worker.stop_event.set()
         if self.recorder:
             self.recorder.stop_event.set();self.stop_btn.setEnabled(False)
             if self.record_controller:self.record_controller.finalizing()
             self.statusBar().showMessage('Finalizing recording… keep SnagForge open')
+        chooser=getattr(self,'region_chooser',None)
+        if chooser:chooser.reject()
+        if self.screenshot_chooser:self.screenshot_chooser.reject()
     def recording_saved(self,path):
-        self.refresh_recent();QMessageBox.information(self.dialog_host(),'Recording saved',f'Saved to:\n{path}')
+        self.refresh_recent()
+        if not getattr(getattr(self.dialog_host(),'tray_controller',None),'quitting',False):
+            QMessageBox.information(self.dialog_host(),'Recording saved',f'Saved to:\n{path}')
     def recording_finished(self):
         if self.record_controller:self.record_controller.close();self.record_controller=None
-        self.recording_since=None;self.record_badge.setText('READY');self.busy=False;self.record_btn.setEnabled(True)
+        self.recording_since=None;self.stopping=False;self.record_badge.setText('READY');self.busy=False;self.record_btn.setEnabled(True)
+        self.stop_btn.setText('Stop & save')
         self.capture_btn.setEnabled(True);self.stop_btn.setEnabled(False);self.showNormal();self.raise_()
         self.update_record_action();self.statusBar().showMessage('Ready · Recording finished or cancelled')
     def refresh_recent(self):
@@ -503,6 +538,7 @@ def main():
     # This must happen before QApplication is constructed. Registering a new
     # desktop ID after Qt has already contacted the host portal is rejected.
     configure_application_identity()
+    logging.basicConfig(level=logging.INFO,format='%(asctime)s [PID %(process)d] %(message)s')
     app=QApplication.instance() or QApplication(sys.argv)
     app.setWindowIcon(application_icon())
     guard=InstanceGuard(app)

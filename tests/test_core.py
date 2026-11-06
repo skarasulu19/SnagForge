@@ -159,7 +159,8 @@ class FakeBus:
             path='/org/freedesktop/portal/desktop/request/1_23/'+token,
             interface='org.freedesktop.portal.Request',member='Response',signature='ua{sv}',
             body=[self.code,{'uri':Variant('s','file:///tmp/test.png')}]))
-        return Message(message_type=MessageType.METHOD_RETURN,reply_serial=1)
+        return Message(message_type=MessageType.METHOD_RETURN,reply_serial=1,signature='o',
+            body=['/org/freedesktop/portal/desktop/request/1_23/'+token])
 
 class MissingSessionBus:
     """A portal bus whose compositor already removed the session object."""

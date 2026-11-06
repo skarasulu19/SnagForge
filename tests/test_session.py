@@ -74,7 +74,7 @@ sys.stdin.read()
                 if angular:
                     host.setCentralWidget(QWidget());engine.shell=host
                 original=host.centralWidget();host.show();app.processEvents()
-                engine.recorder=SimpleNamespace(cancelled=False,crop=None,selection_ready=threading.Event())
+                engine.recorder=SimpleNamespace(cancelled=False,crop=None,selection_ready=threading.Event(),stop_event=threading.Event())
                 image=QImage(800,600,QImage.Format.Format_ARGB32);image.fill(Qt.GlobalColor.white)
                 path=str(Path(directory)/'preview.png');image.save(path)
                 try:
@@ -105,7 +105,7 @@ sys.stdin.read()
     def test_cancel_restores_workspace_without_starting_encoder(self):
         with tempfile.TemporaryDirectory() as directory:
             engine=Window();engine.show();original=engine.centralWidget()
-            engine.recorder=SimpleNamespace(cancelled=False,crop=None,selection_ready=threading.Event())
+            engine.recorder=SimpleNamespace(cancelled=False,crop=None,selection_ready=threading.Event(),stop_event=threading.Event())
             image=QImage(800,600,QImage.Format.Format_ARGB32);image.fill(Qt.GlobalColor.white)
             path=str(Path(directory)/'preview.png');image.save(path)
             try:
@@ -116,6 +116,23 @@ sys.stdin.read()
                 self.assertTrue(engine.recorder.selection_ready.is_set())
                 self.assertIsNone(engine.recorder.crop)
             finally:engine.timer.stop();engine.close()
+
+    def test_stop_rejects_marquee_and_restores_workspace(self):
+        with tempfile.TemporaryDirectory() as directory:
+            engine=Window();engine.show();original=engine.centralWidget();engine.busy=True
+            engine.recorder=SimpleNamespace(cancelled=False,crop=None,selection_ready=threading.Event(),stop_event=threading.Event())
+            image=QImage(800,600,QImage.Format.Format_ARGB32);image.fill(Qt.GlobalColor.white)
+            path=str(Path(directory)/'preview.png');image.save(path)
+            try:
+                engine.video_region(path);engine.stop()
+                self.assertIs(engine.centralWidget(),original)
+                self.assertIsNone(engine.region_chooser)
+                self.assertTrue(engine.recorder.stop_event.is_set())
+                self.assertTrue(engine.recorder.selection_ready.is_set())
+                self.assertTrue(engine.recorder.cancelled)
+                self.assertIsNone(engine.recording_since)
+                engine.recording_finished();self.assertFalse(engine.busy)
+            finally:engine.busy=False;engine.timer.stop();engine.close()
 
 
 if __name__=='__main__':unittest.main()

@@ -42,6 +42,7 @@ export class AppComponent implements AfterViewInit {
   page=signal('editor');tool=signal('Arrow');color=signal('#c35400');stroke=signal(5);
   connected=signal(false);hasImage=signal(false);imageName=signal('Untitled capture');dirty=signal(false);
   width=signal(0);height=signal(0);notice=signal('');recording=signal(false);busy=signal(false);elapsed=signal('00:00');
+  stopping=signal(false);
   mode=signal('MP4 video');audio=signal('Microphone');region=signal(true);delay=signal(0);format=signal('png');
   workflow=signal(localStorage.getItem('snagforge.workflow')||'editor');recent=signal<Recent[]>([]);query=signal('');
   tools=['Arrow','Pen','Rectangle','Ellipse','Line','Text','Callout','Step','Stamp','Highlight','Pixelate','Blur','Redact','Spotlight','Magnify','Capture Info','Crop'];
@@ -55,7 +56,7 @@ export class AppComponent implements AfterViewInit {
       new window.QWebChannel(window.qt.webChannelTransport,channel=>{
         this.bridge=channel.objects.bridge;this.connected.set(true);
         this.bridge.imageReady.connect(data=>{this.page.set('editor');this.demo.set(false);this.load(data,'New capture',true);});
-        this.bridge.stateChanged.connect(data=>{const s=JSON.parse(data);const wasBusy=this.busy();this.busy.set(s.busy);this.recording.set(s.recording);this.elapsed.set(s.elapsed||'00:00');if(s.message)this.toast(s.message);if(s.message||(wasBusy&&!s.busy))this.refresh();});
+        this.bridge.stateChanged.connect(data=>{const s=JSON.parse(data);const wasBusy=this.busy();this.busy.set(s.busy);this.stopping.set(!!s.stopping);this.recording.set(s.recording);this.elapsed.set(s.elapsed||'00:00');if(s.message)this.toast(s.message);if(s.message||(wasBusy&&!s.busy))this.refresh();});
         this.refresh();
       });
     }

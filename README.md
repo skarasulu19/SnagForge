@@ -4,7 +4,7 @@
 
 An independent, GPL-3.0-licensed screenshot and recording workbench built for Ubuntu desktops. Inspired by common screen capture workflows; not affiliated with TechSmith and not compatible with Snagit project files.
 
-**Version 0.3.4-alpha · Target: Ubuntu 26.x GNOME / Wayland · Python 3.10+ · Angular 22**
+**Version 0.3.5-alpha · Target: Ubuntu 26.x GNOME / Wayland · Python 3.10+ · Angular 22**
 
 > This is an early source release, not full Snagit feature parity. Editor, stitching, selection mapping and portal protocol behavior have automated tests. Live capture, audio and encoding still require validation on a real Ubuntu 26 desktop. There are no fabricated recording screenshots or claimed live recording results.
 
@@ -23,6 +23,12 @@ chmod +x install.sh run.sh publish.sh
 The first command installs Ubuntu packages with `sudo`, creates a project-local virtual environment, downloads Python dependencies from PyPI and adds an application menu entry. Run it as your normal desktop user. If dependencies are already installed, use `./install.sh`.
 
 Install dependencies only on the Ubuntu computer where you want to run the app. Do not run the GUI as root. No Docker, web server or account is needed to use it.
+
+## What changed in 0.3.5
+
+Stop and Quit now cancel pending portal and preview waits. Quit stops/finalizes an active encoder and exits after worker cleanup instead of refusing to exit while busy. Cancelling a delayed start cannot launch a new capture, and Stop closes an open marquee. The UI distinguishes **WAITING**, **Cancel capture**, **Stop & save**, and **Finishing**.
+
+Portal responses are correlated with the handle returned by the desktop, including responses received before that method reply. Timeout/cancellation cleanup tolerates already-removed request objects and cannot replace the original error. Failures identify the portal stage, and diagnostic logs include the process ID. Late screenshot completion cannot unlock a new operation.
 
 ## What changed in 0.3.4
 
@@ -45,7 +51,7 @@ To start independently of your terminal:
 ./start.sh
 ```
 
-You can then close the terminal. Diagnostics go to `~/.local/state/SnagForge/snagforge.log` (or the configured XDG state directory). Use **Quit SnagForge** from the tray to exit. The existing `./run.sh` remains the foreground/debug launcher. If a capture is running, stop and save it before quitting.
+You can then close the terminal. Diagnostics go to `~/.local/state/SnagForge/snagforge.log` (or the configured XDG state directory). Use **Quit SnagForge** from the tray to exit. The existing `./run.sh` remains the foreground/debug launcher. Quit cancels a pending picker or stops and finalizes an active recording before exiting.
 
 ## What changed in 0.3.2
 
@@ -168,5 +174,5 @@ Sinan Ozgu Karasulu
 
 ## Checks
 
-The current Python suite has 50 passing tests and one local-socket integration test skipped in restricted environments. The actual Angular desktop window was exercised with synthetic images: startup, native bridge synchronization, rectangle annotation, native clipboard copy, undo/redo, and three rendered UI screenshots. Live Ubuntu 26 screen/audio recording remains unverified. See [validation](docs/VALIDATION.md) and the [Snagit + ShareX hybrid roadmap](docs/HYBRID_ROADMAP.md).
+The current Python suite has 62 passing tests and one local-socket integration test skipped in restricted environments. The actual Angular desktop window was exercised with synthetic images: startup, native bridge synchronization, rectangle annotation, native clipboard copy, undo/redo, and three rendered UI screenshots. Live Ubuntu 26 screen/audio recording remains unverified. See [validation](docs/VALIDATION.md) and the [Snagit + ShareX hybrid roadmap](docs/HYBRID_ROADMAP.md).
 

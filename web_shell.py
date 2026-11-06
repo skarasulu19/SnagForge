@@ -64,6 +64,7 @@ class DesktopBridge(QObject):
     def notify(self,message=''):
         elapsed=0 if self.engine.recording_since is None else int(time.monotonic()-self.engine.recording_since)
         self.stateChanged.emit(json.dumps({'busy':self.engine.busy,'recording':self.engine.recording_since is not None,
+            'stopping':self.engine.stopping,
             'elapsed':f'{elapsed//60:02}:{elapsed%60:02}','message':message}))
 
     def image_changed(self):

@@ -9,6 +9,7 @@ class TrayController(QObject):
     def __init__(self,window,engine,app):
         super().__init__(window)
         self.window=window;self.engine=engine;self.app=app;self.quitting=False
+        self.exit_requested=False
         self.icon=QSystemTrayIcon(application_icon(),self)
         window.setWindowIcon(self.icon.icon())
         self.icon.setToolTip('SnagForge — Capture. Annotate. Explain.')
@@ -29,9 +30,10 @@ class TrayController(QObject):
             self.app.setQuitOnLastWindowClosed(False);self.icon.show()
 
     def update_actions(self):
-        busy=self.engine.busy
+        busy=self.engine.busy or self.quitting
         for action in (self.capture_action,self.area_action,self.full_action):action.setEnabled(not busy)
-        self.stop_action.setEnabled(busy and self.engine.recorder is not None)
+        self.stop_action.setEnabled(not self.quitting and self.engine.busy and not self.engine.stopping)
+        self.stop_action.setText('Stop & save' if self.engine.recording_since is not None else 'Cancel capture')
 
     def open(self):
         if self.window.isMinimized():self.window.showNormal()
@@ -44,18 +46,16 @@ class TrayController(QObject):
         elif reason==QSystemTrayIcon.ActivationReason.DoubleClick:self.open()
 
     def screenshot(self):
-        if not self.engine.busy:self.engine.capture()
+        if not self.quitting and not self.engine.busy:self.engine.capture()
 
     def record(self,region):
-        if self.engine.busy:return
+        if self.engine.busy or self.quitting:return
         self.engine.mode.setCurrentText('MP4 video');self.engine.region.setChecked(region)
         # Area selection is embedded in the existing host; keep it available.
         if region:self.open()
         self.engine.record()
 
     def stop(self):
-        chooser=getattr(self.engine,'region_chooser',None)
-        if chooser:chooser.reject()
         self.engine.stop()
 
     def hide_on_close(self):
@@ -64,7 +64,17 @@ class TrayController(QObject):
         self.icon.show();self.window.hide();return True
 
     def quit(self):
-        if self.engine.busy:
-            self.engine.error('Stop and save the active capture before quitting SnagForge.');return
+        if self.quitting:return
         if not self.engine.can_replace():return
-        self.quitting=True;self.icon.hide();self.app.quit()
+        self.quitting=True;self.update_actions()
+        # Connect before Stop to avoid losing a fast completion signal.
+        for worker in (self.engine.recorder,self.engine.capture_worker):
+            if worker and worker.isRunning():worker.finished.connect(self.finish_quit)
+        if self.engine.busy:self.engine.stop()
+        self.finish_quit()
+
+    def finish_quit(self):
+        if self.exit_requested:return
+        if any(worker and worker.isRunning() for worker in (self.engine.recorder,self.engine.capture_worker)):return
+        self.exit_requested=True
+        self.icon.hide();self.app.quit()
