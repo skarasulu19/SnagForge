@@ -133,6 +133,8 @@ class MediaTests(unittest.TestCase):
         args=pipeline('/tmp/space name;$(bad).mp4','MP4 video',9,42,(10,20,30,40),'Microphone')
         self.assertIn('left=10',args);self.assertIn('bottom=40',args)
         self.assertIn('avenc_aac',args);self.assertIn('mp4mux',args)
+        self.assertIn('pass=qual',args);self.assertIn('quantizer=18',args)
+        self.assertNotIn('videoscale',args)
         self.assertIn('location="/tmp/space name;$(bad).mp4"',args)
         with self.assertRaises(ValueError):pipeline('/tmp/x.mp3','MP3 audio')
         self.assertIn('lamemp3enc',pipeline('/tmp/x.mp3','MP3 audio',audio='Microphone'))

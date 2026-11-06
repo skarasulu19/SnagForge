@@ -35,7 +35,10 @@ def pipeline(output, mode, fd=None, node=None, crop=None, audio='None', fps=30):
         left, top, right, bottom = crop
         cmd += ['!', 'videocrop', f'left={left}', f'top={top}', f'right={right}', f'bottom={bottom}']
     cmd += ['!', 'videorate', '!', f'video/x-raw,framerate={fps}/1',
-            '!', 'videoscale', '!', 'video/x-raw,format=I420', '!', 'x264enc',
+            '!', 'video/x-raw,format=I420', '!', 'x264enc',
+            # Preserve captured pixel dimensions and prioritize detail.
+            # The high bitrate ceiling avoids constraining high-resolution screens.
+            'pass=qual', 'quantizer=18', 'bitrate=50000',
             'tune=zerolatency', 'speed-preset=veryfast', '!', 'h264parse',
             '!', 'queue', '!', 'mux.', 'mp4mux', 'name=mux', '!',
             'filesink', 'location=' + gst_string(output)]
@@ -66,3 +69,4 @@ def stitch(images, overlap, top=0, bottom=0):
         out.paste(im, (0,y))
         y += im.height
     return out
+

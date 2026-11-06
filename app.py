@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 from datetime import datetime
 from PIL import Image
-from PySide6.QtCore import Qt, QTimer, QUrl
+from PySide6.QtCore import Qt, QTimer, QUrl, QFile
 from PySide6.QtGui import QAction, QColor, QDesktopServices, QImage, QPainter, QTransform
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QComboBox, QSpinBox, QCheckBox, QToolBar, QColorDialog,
@@ -103,10 +103,10 @@ class RecordingController(QDialog):
     def __init__(self,stop_callback):
         super().__init__(None,Qt.WindowType.Tool|Qt.WindowType.FramelessWindowHint|Qt.WindowType.WindowStaysOnTopHint)
         self.setWindowTitle('SnagForge · Recording');self.setFixedSize(300,92)
-        self.setStyleSheet('QDialog{background:#172338;border:2px solid #7561ee;border-radius:12px;} QLabel{color:white;} QPushButton{background:#e45d70;color:white;border:0;border-radius:7px;padding:10px 16px;font-weight:700;} QPushButton:disabled{background:#667085;}')
+        self.setStyleSheet('QDialog{background:#282828;border:2px solid #ee9c61;border-radius:12px;} QLabel{color:white;} QPushButton{background:#e45d70;color:white;border:0;border-radius:7px;padding:10px 16px;font-weight:700;} QPushButton:disabled{background:#767676;}')
         row=QHBoxLayout(self);row.setContentsMargins(16,14,16,14);row.setSpacing(14)
         dot=QLabel('●');dot.setStyleSheet('color:#ff6478;font-size:18px;');row.addWidget(dot)
-        column=QVBoxLayout();caption=QLabel('RECORDING');caption.setStyleSheet('color:#aebbd0;font-size:9px;font-weight:700;')
+        column=QVBoxLayout();caption=QLabel('RECORDING');caption.setStyleSheet('color:#bfbfbf;font-size:9px;font-weight:700;')
         self.elapsed=QLabel('00:00');self.elapsed.setStyleSheet('font-size:24px;font-weight:800;')
         column.addWidget(caption);column.addWidget(self.elapsed);row.addLayout(column,1)
         self.stop_button=QPushButton('Stop & save');self.stop_button.clicked.connect(stop_callback);row.addWidget(self.stop_button)
@@ -139,21 +139,25 @@ class Window(QMainWindow):
         sub=QLabel('CAPTURE. CREATE. SHARE.');sub.setObjectName('sideSub');brandcol.addWidget(sub)
         brandrow.addLayout(brandcol);side.addLayout(brandrow);side.addSpacing(28)
         label=QLabel('WORKSPACE');label.setObjectName('sideCaption');side.addWidget(label);side.addSpacing(3)
-        side.addWidget(action_button('  Image editor','image',lambda:self.canvas.setFocus(),'activeNav','#b6a6ff'))
-        side.addWidget(action_button('  Screen recorder','video',self.focus_recording,'nav','#8190ac'))
-        side.addWidget(action_button('  Scrolling capture','scroll',self.scrolling,'nav','#8190ac'))
-        side.addWidget(action_button('  Capture folder','folder',self.open_folder,'nav','#8190ac'))
+        side.addWidget(action_button('  Image editor','image',lambda:self.canvas.setFocus(),'activeNav','#f8ccad'))
+        side.addWidget(action_button('  Screen recorder','video',self.focus_recording,'nav','#969696'))
+        side.addWidget(action_button('  Scrolling capture','scroll',self.scrolling,'nav','#969696'))
+        side.addWidget(action_button('  Capture folder','folder',self.open_folder,'nav','#969696'))
         side.addSpacing(26)
         recentrow=QHBoxLayout();label=QLabel('RECENT EXPORTS');label.setObjectName('sideCaption');recentrow.addWidget(label);recentrow.addStretch()
         self.recent_count=QLabel('0');self.recent_count.setObjectName('sideSub');recentrow.addWidget(self.recent_count);side.addLayout(recentrow)
         self.recent=QListWidget();self.recent.setWordWrap(True);self.recent.itemDoubleClicked.connect(self.open_recent)
         side.addWidget(self.recent,1)
+        self.recent.setContextMenuPolicy(Qt.ContextMenuPolicy.ActionsContextMenu)
+        for label,callback in [('Copy file path',self.copy_selected_path),('Delete (move to Trash)',self.delete_selected_capture)]:
+            action=QAction(label,self.recent);action.triggered.connect(callback);self.recent.addAction(action)
         self.recent_empty=QLabel('Your exported captures\nwill appear here.');self.recent_empty.setObjectName('sideSub');side.addWidget(self.recent_empty)
         side.addSpacing(14)
         privacy=QLabel('●  Local by default');privacy.setStyleSheet('color:#73c5ac;font-size:11px;padding:10px 0;');side.addWidget(privacy)
-        side.addWidget(action_button('  Help & user manual','help',self.manual,'sideQuiet','#8292ae'))
-        foot=QHBoxLayout();version=QLabel('v0.2.1');version.setObjectName('sideSub');foot.addWidget(version)
+        side.addWidget(action_button('  Help & user manual','help',self.manual,'sideQuiet','#989898'))
+        foot=QHBoxLayout();version=QLabel('v0.3.3');version.setObjectName('sideSub');foot.addWidget(version)
         alpha=QLabel('ALPHA');alpha.setObjectName('alpha');foot.addWidget(alpha);foot.addStretch();side.addLayout(foot)
+        author=QLabel('Author: Sinan Ozgu Karasulu');author.setWordWrap(True);author.setObjectName('sideSub');side.addWidget(author)
 
         workspace=QWidget();shell.addWidget(workspace,1)
         layout=QVBoxLayout(workspace);layout.setContentsMargins(28,25,28,6);layout.setSpacing(18)
@@ -167,7 +171,7 @@ class Window(QMainWindow):
         card=QFrame();card.setObjectName('editorCard');editorrow.addWidget(card,1)
         cardlayout=QVBoxLayout(card);cardlayout.setContentsMargins(0,0,0,0);cardlayout.setSpacing(0)
         imagehead=QFrame();imagehead.setObjectName('imageHeader');ih=QHBoxLayout(imagehead);ih.setContentsMargins(16,14,16,12)
-        nameicon=QLabel();nameicon.setPixmap(icon('image','#8e83bd',17).pixmap(17,17));ih.addWidget(nameicon)
+        nameicon=QLabel();nameicon.setPixmap(icon('image','#bd9b83',17).pixmap(17,17));ih.addWidget(nameicon)
         self.image_title=QLabel('Untitled capture');self.image_title.setObjectName('filename');ih.addWidget(self.image_title);ih.addStretch()
         chip=QLabel('LOCAL WORKSPACE');chip.setObjectName('chip');ih.addWidget(chip);cardlayout.addWidget(imagehead)
         toolbar=QFrame();toolbar.setObjectName('toolbar');tools=QHBoxLayout(toolbar);tools.setContentsMargins(10,4,10,10);tools.setSpacing(3)
@@ -194,7 +198,7 @@ class Window(QMainWindow):
         self.active_tool=QLabel('ARROW');self.active_tool.setObjectName('caption');props.addWidget(self.active_tool);props.addSpacing(8)
         props.addWidget(caption('COLOR'))
         swatches=QHBoxLayout();swatches.setSpacing(5);self.color_buttons=[]
-        for color in ['#7561ee','#ff7759','#38b997','#f4b846','#26334a']:
+        for color in ['#ee9c61','#ff7759','#38b997','#f4b846','#383838']:
             control=QPushButton();control.setObjectName('swatch');control.setFixedSize(25,25)
             control.setToolTip(color);control.setAccessibleName('Color '+color)
             control.setStyleSheet('background:'+color+';');control.clicked.connect(lambda checked=False,c=color:self.set_color(QColor(c)))
@@ -207,11 +211,11 @@ class Window(QMainWindow):
         for text,name,fn in [('Copy image','copy',self.copy),('Pin reference','pin',self.pin_image),('Rotate 90°','rotate',self.rotate),('Resize image','resize',self.resize_image),('Border & shadow','frame',self.add_frame),('Extract text','ocr',self.ocr)]:
             control=action_button(text,name,fn,'quiet');control.setStyleSheet('text-align:left;');props.addWidget(control)
         props.addStretch()
-        tips=QLabel('GOOD TO KNOW\n\nDrag on the image to annotate.\nCtrl+Z brings you back.');tips.setWordWrap(True);tips.setStyleSheet('color:#9aa5b5;font-size:10px;line-height:1.5;');props.addWidget(tips)
+        tips=QLabel('GOOD TO KNOW\n\nDrag on the image to annotate.\nCtrl+Z brings you back.');tips.setWordWrap(True);tips.setStyleSheet('color:#a8a8a8;font-size:10px;line-height:1.5;');props.addWidget(tips)
 
         recordcard=QFrame();recordcard.setObjectName('recordCard');self.record_card=recordcard
         rl=QVBoxLayout(recordcard);rl.setContentsMargins(18,15,18,16);rl.setSpacing(13)
-        rh=QHBoxLayout();recordicon=QLabel();recordicon.setPixmap(icon('video','#8a7de0',18).pixmap(18,18));rh.addWidget(recordicon)
+        rh=QHBoxLayout();recordicon=QLabel();recordicon.setPixmap(icon('video','#e0a67d',18).pixmap(18,18));rh.addWidget(recordicon)
         label=QLabel('Screen & audio recording');label.setObjectName('sectionTitle');rh.addWidget(label);rh.addStretch()
         self.record_badge=QLabel('READY');self.record_badge.setObjectName('caption');rh.addWidget(self.record_badge);rl.addLayout(rh)
         controls=QHBoxLayout();controls.setSpacing(14)
@@ -229,7 +233,7 @@ class Window(QMainWindow):
         self.region.toggled.connect(self.update_record_action)
         self.mode.currentTextChanged.connect(self.update_record_action)
         self.stroke.valueChanged.connect(lambda n:setattr(self.canvas,'stroke_width',n))
-        self.canvas.changed.connect(self.changed);self.set_color(QColor('#7561ee'))
+        self.canvas.changed.connect(self.changed);self.set_color(QColor('#ee9c61'))
         self.statusBar().showMessage('Ready to capture something worth explaining.')
         self.timer=QTimer(self);self.timer.timeout.connect(self.tick);self.timer.start(1000)
         for key,fn in [('Ctrl+O',self.open_image),('Ctrl+S',self.save),('Ctrl+C',self.copy),('Ctrl+V',self.paste),('Ctrl+Z',self.canvas.undo),('Ctrl+Shift+Z',self.canvas.redo),('Ctrl+N',self.capture),('Ctrl+Shift+R',self.record_area)]:
@@ -315,11 +319,11 @@ class Window(QMainWindow):
         if self.canvas.image.isNull():return
         source=self.canvas.image;margin=32
         result=QImage(source.width()+margin*2,source.height()+margin*2,QImage.Format.Format_ARGB32)
-        result.fill(QColor('#eef1f7'));painter=QPainter(result)
+        result.fill(QColor('#f2f2f2'));painter=QPainter(result)
         painter.setPen(Qt.PenStyle.NoPen);painter.setBrush(QColor(21,31,49,55))
         painter.drawRoundedRect(margin+8,margin+8,source.width(),source.height(),8,8)
         painter.drawImage(margin,margin,source);painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.setPen(QColor('#d8deea'));painter.drawRect(margin,margin,source.width()-1,source.height()-1)
+        painter.setPen(QColor('#e1e1e1'));painter.drawRect(margin,margin,source.width()-1,source.height()-1)
         painter.end();self.canvas.commit(result)
     def save(self):
         if self.canvas.image.isNull():return False
@@ -438,6 +442,38 @@ class Window(QMainWindow):
         elif self.can_replace():self.load_image(QImage(str(path)))
     def open_folder(self):
         CAPTURES.mkdir(parents=True,exist_ok=True);QDesktopServices.openUrl(QUrl.fromLocalFile(str(CAPTURES)))
+    def capture_path(self,name):
+        root=CAPTURES.resolve();path=(root/name).resolve()
+        if name!=Path(name).name or path.parent!=root or not path.is_file():
+            raise ValueError('This capture is no longer available in the capture folder.')
+        if path.suffix.lower() not in ('.png','.jpg','.jpeg','.webp','.mp4','.mp3'):
+            raise ValueError('Unsupported capture file.')
+        return path
+    def copy_capture_path(self,name):
+        try:
+            QApplication.clipboard().setText(str(self.capture_path(name)))
+            self.statusBar().showMessage('File path copied to clipboard.')
+            return True
+        except Exception as error:self.error(str(error));return False
+    def delete_capture(self,name):
+        try:
+            if self.busy:raise ValueError('Stop and save the active capture before deleting files.')
+            path=self.capture_path(name)
+            answer=QMessageBox.question(self.dialog_host(),'Move capture to Trash',
+                f'Move "{path.name}" to Trash? You can restore it from Trash.',
+                QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.No,QMessageBox.StandardButton.No)
+            if answer!=QMessageBox.StandardButton.Yes:return False
+            result=QFile.moveToTrash(str(path))
+            if not (result[0] if isinstance(result,tuple) else result):
+                raise OSError('Could not move this capture to Trash. The file has been kept.')
+            self.refresh_recent();return True
+        except Exception as error:self.error(str(error));return False
+    def copy_selected_path(self):
+        item=self.recent.currentItem()
+        if item:self.copy_capture_path(item.text())
+    def delete_selected_capture(self):
+        item=self.recent.currentItem()
+        if item:self.delete_capture(item.text())
     def manual(self):
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(__file__).parent/'docs'/'MANUAL.html')))
     def ocr(self):
@@ -453,6 +489,8 @@ class Window(QMainWindow):
             if ok:QApplication.clipboard().setText(text)
         except Exception as e:self.error(str(e))
     def closeEvent(self,event):
+        if getattr(self,'tray_controller',None) and self.tray_controller.hide_on_close():
+            event.ignore();return
         if self.busy:
             self.error('Finish or cancel the active capture first. For recording, press Stop & save and wait for finalization.')
             event.ignore();return
@@ -473,6 +511,8 @@ def main():
     app.setStyle('Fusion');app.setStyleSheet(STYLE)
     window=Window();window.show()
     guard.set_window(window)
+    from tray import TrayController
+    window.tray_controller=TrayController(window,window,app)
     if len(sys.argv)>1 and Path(sys.argv[1]).is_file():window.load_image(QImage(sys.argv[1]))
     return app.exec()
 

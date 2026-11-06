@@ -73,9 +73,9 @@ class Canvas(QWidget):
 
     def paintEvent(self, e):
         p=QPainter(self)
-        p.fillRect(self.rect(), QColor('#111723'))
+        p.fillRect(self.rect(), QColor('#1a1a1a'))
         if self.image.isNull():
-            p.setPen(QColor('#a5b2c7'))
+            p.setPen(QColor('#b6b6b6'))
             p.setFont(QFont('Sans', 16))
             p.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter,
                        'Capture something worth explaining.\n\nNew capture · Open image · Paste from clipboard')
@@ -250,7 +250,7 @@ class RegionSelector(QWidget):
                       source.width()*scale,source.height()*scale)
 
     def paintEvent(self,event):
-        painter=QPainter(self);painter.fillRect(self.rect(),QColor('#080d18'))
+        painter=QPainter(self);painter.fillRect(self.rect(),QColor('#101010'))
         target=self.image_rect()
         if target.isEmpty():return
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
@@ -260,12 +260,12 @@ class RegionSelector(QWidget):
             painter.fillRect(target,QColor(4,8,18,145))
             destination=self.target_rect(source)
             painter.drawImage(destination,self.image,QRectF(source))
-            painter.setPen(QPen(QColor('#8f7cff'),3))
+            painter.setPen(QPen(QColor('#f5b486'),3))
             painter.drawRect(destination)
             label=f'{source.width():,} × {source.height():,}'
             metrics=painter.fontMetrics();label_width=metrics.horizontalAdvance(label)+24
             label_box=QRectF(destination.x(),max(12,destination.y()-38),label_width,28)
-            painter.setPen(Qt.PenStyle.NoPen);painter.setBrush(QColor('#7864ef'))
+            painter.setPen(Qt.PenStyle.NoPen);painter.setBrush(QColor('#ef9e64'))
             painter.drawRoundedRect(label_box,6,6)
             painter.setPen(Qt.GlobalColor.white)
             painter.drawText(label_box,Qt.AlignmentFlag.AlignCenter,label)
@@ -336,7 +336,7 @@ class RegionDialog(QDialog):
         self.selector.cancelled.connect(self.reject)
         layout.addWidget(self.selector,1)
         actions=QHBoxLayout();actions.setContentsMargins(18,12,18,12);actions.setSpacing(10)
-        hint=QLabel('Drag, release to set the box, then confirm.');hint.setStyleSheet('color:#64748b;')
+        hint=QLabel('Drag, release to set the box, then confirm.');hint.setStyleSheet('color:#787878;')
         actions.addWidget(hint);actions.addStretch()
         cancel=QPushButton('Cancel');cancel.clicked.connect(self.reject);actions.addWidget(cancel)
         full=QPushButton('Use full source');full.clicked.connect(self.use_full_source);actions.addWidget(full)

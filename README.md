@@ -4,7 +4,7 @@
 
 An independent, GPL-3.0-licensed screenshot and recording workbench built for Ubuntu desktops. Inspired by common screen capture workflows; not affiliated with TechSmith and not compatible with Snagit project files.
 
-**Version 0.3.2-alpha · Target: Ubuntu 26.x GNOME / Wayland · Python 3.10+ · Angular 22**
+**Version 0.3.3-alpha · Target: Ubuntu 26.x GNOME / Wayland · Python 3.10+ · Angular 22**
 
 > This is an early source release, not full Snagit feature parity. Editor, stitching, selection mapping and portal protocol behavior have automated tests. Live capture, audio and encoding still require validation on a real Ubuntu 26 desktop. There are no fabricated recording screenshots or claimed live recording results.
 
@@ -23,6 +23,23 @@ chmod +x install.sh run.sh publish.sh
 The first command installs Ubuntu packages with `sudo`, creates a project-local virtual environment, downloads Python dependencies from PyPI and adds an application menu entry. Run it as your normal desktop user. If dependencies are already installed, use `./install.sh`.
 
 Install dependencies only on the Ubuntu computer where you want to run the app. Do not run the GUI as root. No Docker, web server or account is needed to use it.
+
+## What changed in 0.3.3
+
+- An orange and charcoal interface with an author credit for **Sinan Ozgu Karasulu**.
+- **Copy file path** and **Delete** in Capture library. Delete confirms before moving files to Trash; active captures cannot be deleted. The native recent-export list offers these actions in its right-click menu.
+- High-quality H.264 recording at the captured source dimensions and 30 fps, using constant-quality Q18 encoding with a 50 Mbps ceiling. Files can be larger than earlier recordings; live encoder validation is still required.
+- Video area selection uses the existing window and locks the rectangle when the mouse is released. Errors restore the application and request foreground focus with **OK** selected.
+- One SnagForge session per user. Repeated launches request the existing window.
+- A system tray menu with **Take screenshot**, **Record selected area**, **Record full screen / window**, **Stop & save**, **Open SnagForge**, and **Quit SnagForge**. Closing the window hides it when the desktop provides system tray support. GNOME needs an enabled tray/AppIndicator implementation; if unavailable, closing the window exits normally.
+
+To start independently of your terminal:
+
+```bash
+./start.sh
+```
+
+You can then close the terminal. Diagnostics go to `~/.local/state/SnagForge/snagforge.log` (or the configured XDG state directory). Use **Quit SnagForge** from the tray to exit. The existing `./run.sh` remains the foreground/debug launcher. If a capture is running, stop and save it before quitting.
 
 ## What changed in 0.3.2
 
@@ -77,7 +94,7 @@ The patch fixes a GNOME portal cleanup race that could escape `QThread.run()` af
 5. If selecting a region, drag a rectangle on the full-screen overlay. Press **Enter** for the full source or **Esc** to cancel.
 6. The app minimizes while recording. Restore it from the desktop and press **Stop & save**. Wait for the file to finalize.
 
-There is currently no webcam, pause/resume, tray stop control or simultaneous microphone/system mixing. Restoring the app can appear in a full-monitor recording. Record a separate window to avoid that, or trim externally afterward. Audio-only uses the selected/default source without a screen picker.
+There is currently no webcam, pause/resume or simultaneous microphone/system mixing. Restoring the app can appear in a full-monitor recording. Record a separate window to avoid that, or trim externally afterward. Audio-only uses the selected/default source without a screen picker.
 
 ![Actual recording controls in the idle setup state](docs/screenshots/04-recording-setup.png)
 
@@ -139,6 +156,11 @@ The repository contains the application, illustrated manual, screenshots, tests 
 
 This repository uses GPL-3.0, as selected when the repository was created. The original alpha's MIT copyright and permission notice is retained in LICENSE-MIT. Dependencies retain their own licenses: PySide6/Qt include LGPL/GPL/commercial terms, dbus-next is MIT, Pillow has its own permissive license, and GStreamer components/codecs have their own terms. This is source distribution; review dependency and codec obligations before redistributing a bundled binary. Snagit names are used only for comparison, without copied branding or assets.
 
+## Author
+
+Sinan Ozgu Karasulu
+
 ## Checks
 
-Twenty-two Python tests pass. The actual Angular desktop window was exercised with synthetic images: startup, native bridge synchronization, rectangle annotation, native clipboard copy, undo/redo, and three rendered UI screenshots. Live Ubuntu 26 screen/audio recording remains unverified. See [validation](docs/VALIDATION.md) and the [Snagit + ShareX hybrid roadmap](docs/HYBRID_ROADMAP.md).
+The current Python suite has 39 passing tests and one local-socket integration test skipped in restricted environments. The actual Angular desktop window was exercised with synthetic images: startup, native bridge synchronization, rectangle annotation, native clipboard copy, undo/redo, and three rendered UI screenshots. Live Ubuntu 26 screen/audio recording remains unverified. See [validation](docs/VALIDATION.md) and the [Snagit + ShareX hybrid roadmap](docs/HYBRID_ROADMAP.md).
+
