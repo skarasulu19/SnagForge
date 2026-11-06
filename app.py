@@ -21,6 +21,12 @@ from ui import STYLE, icon, action_button, caption, field, ReferenceWindow
 
 CAPTURES=Path.home()/'Pictures'/'SnagForge'
 
+def configure_application_identity():
+    """Set the desktop identity before QApplication contacts host portals."""
+    QApplication.setApplicationName('SnagForge')
+    QApplication.setOrganizationName('SnagForge')
+    QApplication.setDesktopFileName('snagforge')
+
 def pil_image(image):
     from PySide6.QtCore import QBuffer, QIODevice
     buffer=QBuffer();buffer.open(QIODevice.OpenModeFlag.WriteOnly)
@@ -387,10 +393,13 @@ class Window(QMainWindow):
 
 
 def main():
+    # This must happen before QApplication is constructed. Registering a new
+    # desktop ID after Qt has already contacted the host portal is rejected.
+    configure_application_identity()
     if '--native' not in sys.argv and (Path(__file__).parent/'frontend'/'dist'/'index.html').is_file():
         from web_shell import run
         return run()
-    app=QApplication(sys.argv);app.setApplicationName('SnagForge');app.setDesktopFileName('snagforge')
+    app=QApplication(sys.argv)
     app.setStyle('Fusion');app.setStyleSheet(STYLE)
     window=Window();window.show()
     if len(sys.argv)>1 and Path(sys.argv[1]).is_file():window.load_image(QImage(sys.argv[1]))

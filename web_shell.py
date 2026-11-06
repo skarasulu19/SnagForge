@@ -12,7 +12,7 @@ from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineSettings
 from PySide6.QtWebEngineWidgets import QWebEngineView
 
-from app import Window, CAPTURES
+from app import Window, CAPTURES, configure_application_identity
 
 ROOT=Path(__file__).resolve().parent
 
@@ -189,7 +189,7 @@ class DesktopWindow(QMainWindow):
         event.accept()
 
 def run():
+    configure_application_identity()
     app=QApplication.instance() or QApplication([])
-    app.setApplicationName('SnagForge');app.setDesktopFileName('snagforge')
     window=DesktopWindow();window.show()
     return app.exec()
