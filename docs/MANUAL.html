@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SnagForge User Manual</title><style>body{font:16px/1.65 system-ui,sans-serif;color:#23334a;max-width:1050px;margin:40px auto;padding:0 24px}h1,h2{color:#153b56}h2{margin-top:2em;border-bottom:1px solid #d7e2eb;padding-bottom:8px}img{max-width:100%;border-radius:10px;border:1px solid #d7e2eb}table{border-collapse:collapse;width:100%;font-size:14px}td,th{border:1px solid #d7e2eb;text-align:left;padding:10px}th{background:#eef5f8}pre{background:#142238;color:#ecf4fb;padding:18px;overflow:auto;border-radius:8px}code{font-family:monospace}a{color:#087b74}@media print{body{font-size:11px;margin:0}h2{break-after:avoid}img,table{break-inside:avoid}}</style><body><h1>SnagForge user manual</h1>
-<p><strong>0.2.0 alpha · Angular desktop interface · Ubuntu 26.x target</strong></p>
+<p><strong>0.2.1 alpha · Angular desktop interface · Ubuntu 26.x target</strong></p>
 <p>SnagForge is an independent, open-source capture studio inspired by screenshot editing and automation workflows. The Angular interface runs locally in a Qt desktop window and communicates with a native Python capture engine. No web server or cloud account is required for desktop use.</p>
 <p>The editor and native bridge have been exercised with synthetic data. Live GNOME/Wayland capture, sound routing and media encoding still require Ubuntu desktop acceptance testing. Do not treat the screenshots in this manual as evidence of successful video capture.</p>
 <p><img alt="Actual Angular desktop editor with synthetic demonstration content" src="screenshots/05-angular-editor.png" /></p>
@@ -25,10 +25,10 @@
 <ol>
 <li>Click <strong>New capture</strong> or press <strong>Ctrl+N</strong>.</li>
 <li>Approve the system screenshot picker and select the source it offers.</li>
-<li>A captured preview opens. Drag a rectangle or choose <strong>Full source</strong>.</li>
+<li>A full-screen marquee opens over the portal-approved frame. Drag the exact rectangle you want; its pixel dimensions appear beside it. Press <strong>Enter</strong> for the full source or <strong>Esc</strong> to cancel.</li>
 <li>The resulting image opens in the Angular editor.</li>
 </ol>
-<p>This alpha selects regions on a captured preview. It does not provide its own transparent live screen-selection overlay. The system picker may offer selection independently. Cancel any picker to exit without replacing the image.</p>
+<p>Wayland does not let applications read the desktop freely. SnagForge therefore builds the desktop-style overlay from the frame approved by GNOME's portal instead of bypassing the permission model. The overlay is full-screen and visually matches the selected source, but it is not an unrestricted transparent view through to the desktop. Cancel any picker or press <strong>Esc</strong> to exit without replacing the image.</p>
 <p>Configure a 0, 3, 5, 10 or 30 second screenshot delay in <strong>Workflows</strong>. A delay is useful for opening a menu before capture.</p>
 <h2>4. Open, annotate and edit an image</h2>
 <p>Click <strong>Open image</strong>, press <strong>Ctrl+O</strong>, or drop a PNG/JPEG/WebP/BMP into the editor. File import is limited to 50 MB and images to 100 megapixels. Existing unsaved work prompts before replacement.</p>
@@ -70,6 +70,10 @@
 <td>Obscure visual detail; unsuitable for protecting secrets</td>
 </tr>
 <tr>
+<td>Blur</td>
+<td>Apply a Gaussian blur to distracting details; use Redact for secrets</td>
+</tr>
+<tr>
 <td>Redact</td>
 <td>Replace selected pixels with an opaque dark rectangle</td>
 </tr>
@@ -84,7 +88,7 @@
 </tbody>
 </table>
 <p>Use <strong>Tool properties</strong> for color and stroke/text size. Use <strong>Undo</strong> / <strong>Redo</strong> or <strong>Ctrl+Z</strong> / <strong>Ctrl+Shift+Z</strong>. History retains up to 20 image snapshots in memory. Annotations are raster edits, not movable vector objects, and history is not saved with exports.</p>
-<p><strong>Rotate 90°</strong> rotates clockwise. <strong>Resize image</strong> asks for a new pixel width and preserves the aspect ratio. The minus/plus controls adjust the view; they do not resize exported pixels.</p>
+<p><strong>Rotate 90°</strong> rotates clockwise. <strong>Resize image</strong> asks for a new pixel width and preserves the aspect ratio. <strong>Border &amp; shadow</strong> places the image on a light frame with a subtle shadow. The minus/plus controls adjust the view; they do not resize exported pixels.</p>
 <p><strong>Explore with an example</strong> loads synthetic demonstration content. It is an optional example, not a captured desktop.</p>
 <h2>5. Export, copy and paste</h2>
 <p>Choose PNG, JPEG or WebP in the properties panel, then click <strong>Export image</strong> or <strong>Ctrl+S</strong>. Select the destination in the native save dialog. PNG preserves lossless image detail; JPEG is typically smaller but lossy.</p>
@@ -102,7 +106,7 @@
 <li>For video, enable <strong>Select a region</strong> if you want cropping.</li>
 <li>Optionally set a delay and click <strong>Start recording</strong>.</li>
 <li>Choose the output file. For video, approve the desktop screen/window picker.</li>
-<li>If region selection is enabled, choose a rectangle on a preview from that source.</li>
+<li>If region selection is enabled, drag a rectangle on the full-screen source overlay. The displayed dimensions map to source pixels.</li>
 <li>Restore SnagForge and click <strong>Stop &amp; save</strong>. Wait for the file to finalize, then verify playback.</li>
 </ol>
 <p>Current video encoding uses software x264 / H.264, MP4 and 30 fps. Audio in MP4 uses AAC; audio-only export uses MP3. Hardware encoding, 60 fps, webcam overlays, pause/resume, audio meters, simultaneous microphone/system mixing, noise reduction and built-in video trimming are not implemented.</p>

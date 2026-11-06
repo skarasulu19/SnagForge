@@ -79,8 +79,28 @@ class Portal:
         return reply.unix_fds[reply.body[0]]
 
     async def close(self):
+        """Release the portal session and bus without failing application shutdown.
+
+        GNOME may remove a ScreenCast session itself when capture is cancelled,
+        stopped, or its PipeWire stream ends.  Calling ``Close`` after that is a
+        normal race and must not escape a worker thread as an exception.
+        """
+        bus = getattr(self, 'bus', None)
+        session = getattr(self, 'session', None)
+        self.session = None
         try:
-            if getattr(self, 'session', None):
-                await self.call('org.freedesktop.portal.Session', 'Close', path=self.session)
+            if bus and session:
+                try:
+                    await self.call('org.freedesktop.portal.Session', 'Close', path=session)
+                except Exception:
+                    # Session.Close is cleanup only.  The compositor is allowed
+                    # to destroy the object first, and a disconnected session
+                    # bus is equally safe to regard as already closed.
+                    pass
         finally:
-            self.bus.disconnect()
+            if bus:
+                try:
+                    bus.disconnect()
+                except Exception:
+                    pass
+            self.bus = None

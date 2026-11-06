@@ -8,7 +8,7 @@ from PySide6.QtCore import QPointF, QRectF
 from PySide6.QtGui import QColor, QFont, QImage, QPainter
 from PySide6.QtWidgets import QApplication
 from app import Window, ScrollDialog, STYLE
-from editor import RegionDialog
+from editor import RegionSelector
 
 out=Path(__file__).parent/'screenshots';out.mkdir(exist_ok=True)
 app=QApplication([]);app.setStyle('Fusion');app.setStyleSheet(STYLE)
@@ -34,9 +34,11 @@ result=window.canvas.image.copy();window.canvas.draw_annotation(result);window.c
 window.canvas.tool='Step';window.canvas.points=[QPointF(1013,145),QPointF(1013,145)]
 result=window.canvas.image.copy();window.canvas.draw_annotation(result);window.canvas.commit(result)
 window.canvas.tool='Arrow';app.processEvents();window.grab().save(str(out/'01-editor.png'))
-selection=RegionDialog(image);selection.show();app.processEvents()
-selection.canvas.points=[QPointF(376,98),QPointF(724,230)];selection.canvas.dragging=True
-selection.canvas.update();app.processEvents();selection.grab().save(str(out/'02-region-selection.png'));selection.hide()
+selection=RegionSelector(image);selection.resize(1100,750);selection.show();app.processEvents()
+selection.start=QPointF(180,180);selection.end=QPointF(650,470);selection.pointer=selection.end
+selection.update();app.processEvents()
+if not selection.grab().save(str(out/'02-region-selection.png')):raise RuntimeError('Could not render region selector')
+selection.hide()
 scroll=ScrollDialog(window);scroll.add(image);scroll.add(image);scroll.show();app.processEvents();scroll.grab().save(str(out/'03-scrolling-capture.png'));scroll.hide()
 # Recording controls shown in their actual idle state: no fake active recording.
 window.mode.setCurrentText('MP4 video');window.audio.setCurrentText('System audio');window.region.setChecked(True)

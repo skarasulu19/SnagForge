@@ -4,7 +4,7 @@
 
 An independent, GPL-3.0-licensed screenshot and recording workbench built for Ubuntu desktops. Inspired by common screen capture workflows; not affiliated with TechSmith and not compatible with Snagit project files.
 
-**Version 0.2.0-alpha · Target: Ubuntu 26.x GNOME / Wayland · Python 3.10+ · Angular 22**
+**Version 0.2.1-alpha · Target: Ubuntu 26.x GNOME / Wayland · Python 3.10+ · Angular 22**
 
 > This is an early source release, not full Snagit feature parity. Editor, stitching, selection mapping and portal protocol behavior have automated tests. Live capture, audio and encoding still require validation on a real Ubuntu 26 desktop. There are no fabricated recording screenshots or claimed live recording results.
 
@@ -24,23 +24,23 @@ The first command installs Ubuntu packages with `sudo`, creates a project-local 
 
 Install dependencies only on the Ubuntu computer where you want to run the app. Do not run the GUI as root. No Docker, web server or account is needed to use it.
 
-## What changed in 0.2
+## What changed in 0.2.1
 
 A new offline Angular desktop interface provides a focused image editor, recording setup, searchable recent-export library and local after-capture workflows. The native Python / PipeWire / GStreamer engine handles desktop operations through Qt WebChannel. Node.js is needed only to rebuild the interface; the prebuilt UI is included.
 
-New tools include pinned image reference windows and three local screenshot workflows: annotate first, quick copy, and save & copy.
+The patch fixes a GNOME portal cleanup race that could escape `QThread.run()` after recording. It also adds a full-screen desktop-style marquee with a crosshair and live pixel dimensions, a Gaussian blur tool, and a one-click border/shadow frame. Existing 0.2 additions include pinned references and three local screenshot workflows: annotate first, quick copy, and save & copy.
 
 ## Features in this source release
 
 | Capability | Status / behavior |
 |---|---|
-| Screenshots | Desktop portal picker, then full source or drag a region on the captured preview |
+| Screenshots | Desktop portal permission flow, then a full-screen marquee overlay; drag a region, press Enter for full source, or Esc to cancel |
 | Screen/window recording | MP4, H.264 video, 30 fps, desktop portal + PipeWire + GStreamer; desktop validation pending |
-| Region video | Select a rectangle on a still preview of the chosen screen/window; cropped before encoding |
+| Region video | Select with the same full-screen marquee over a portal-approved frame; cropped before encoding |
 | Audio | Choose microphone/default input OR default system output; AAC in MP4, MP3 audio-only |
 | Scrolling capture | Guided captures/imports, fixed manual overlap, optional header/footer trim; vertical only |
 | Annotation | Arrow, line, pen, rectangle, ellipse, text, numbered steps, highlight |
-| Image editing | Crop, resize preserving aspect ratio, rotate, pixelate, opaque redact, spotlight |
+| Image editing | Crop, proportional resize, rotate, pixelate, Gaussian blur, opaque redact, spotlight, border/shadow frame |
 | History | Undo/redo up to 20 raster snapshots in memory |
 | Export | Flattened PNG, JPEG, WebP; image clipboard copy and paste |
 | OCR | Local Tesseract text extraction, review/copy; no in-place text editing |
@@ -58,7 +58,7 @@ New tools include pinned image reference windows and three local screenshot work
 2. Choose **None**, **Microphone**, or **System audio**. MP3 requires an audio source.
 3. For video, enable **Select region** if you want a crop.
 4. Click **Record**, choose a file and approve the desktop screen/window picker.
-5. If selecting a region, drag a rectangle on the source preview or choose **Full source**.
+5. If selecting a region, drag a rectangle on the full-screen overlay. Press **Enter** for the full source or **Esc** to cancel.
 6. The app minimizes while recording. Restore it from the desktop and press **Stop & save**. Wait for the file to finalize.
 
 There is currently no webcam, pause/resume, tray stop control or simultaneous microphone/system mixing. Restoring the app can appear in a full-monitor recording. Record a separate window to avoid that, or trim externally afterward. Audio-only uses the selected/default source without a screen picker.

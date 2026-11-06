@@ -14,7 +14,12 @@ class CaptureWorker(QThread):
     image = Signal(str)
     error = Signal(str)
     def run(self):
-        asyncio.run(self.capture())
+        try:
+            asyncio.run(self.capture())
+        except Exception as e:
+            # Exceptions must never cross QThread.run(), where PySide reports
+            # them as a Python override failure and may terminate the process.
+            self.error.emit(str(e))
     async def capture(self):
         portal=None
         try:
@@ -46,7 +51,12 @@ class Recorder(QThread):
         self.cancelled=False
 
     def run(self):
-        asyncio.run(self.record())
+        try:
+            asyncio.run(self.record())
+        except Exception as e:
+            # record() handles operational failures itself; this is the final
+            # guard for shutdown/cleanup errors at the Qt thread boundary.
+            self.error.emit(str(e))
 
     async def record(self):
         portal=None

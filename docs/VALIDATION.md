@@ -3,7 +3,7 @@
 ## Executed in the development environment
 
 - Python 3.12 and PySide6 6.12; Linux headless Qt offscreen platform.
-- Twelve passing automated tests cover image annotation/crop/history, coordinate mapping, opaque redaction, stitch pixel continuity, invalid stitch input, pipeline/audio/crop arguments, early portal responses, portal cancellation, image bridge validation, bridge echo suppression and navigation confinement.
+- Sixteen passing automated tests cover image annotation/crop/history/blur, editor and full-screen marquee coordinate mapping, marquee keyboard actions, opaque redaction, stitch pixel continuity, invalid stitch input, pipeline/audio/crop arguments, early portal responses, portal cancellation, idempotent portal cleanup, image bridge validation, bridge echo suppression and navigation confinement.
 - Rendered and visually inspected actual editor/selection/scrolling/recording-setup widgets with synthetic sample data.
 - Python compilation and shell syntax checks.
 
@@ -15,6 +15,7 @@ There is no GNOME/Wayland desktop capture session in the development runtime. GS
 
 - [ ] Install into a permanent folder as a normal user; launch from Applications.
 - [ ] Capture a screen, window and rectangular image selection; cancel every picker safely.
+- [ ] Verify the full-screen marquee, live source-pixel dimensions, Enter for full source, Esc/right-click cancellation and reverse-direction drags.
 - [ ] Verify coordinate mapping at 100%, 125%, 150% and 200% scaling on one and multiple monitors.
 - [ ] Check delayed screenshot with a menu open.
 - [ ] Annotate, crop, undo, redo, copy/paste and export PNG/JPEG/WebP; inspect pixels and dimensions.

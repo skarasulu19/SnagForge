@@ -4,14 +4,14 @@ The comparison reference is [TechSmith's Snagit features page](https://www.techs
 
 | Workflow | SnagForge 0.2 alpha | Remaining work |
 |---|---|---|
-| Screenshot capture | Portal picker and rectangle selection on returned preview | Live desktop overlay, presets, multi-region capture |
+| Screenshot capture | Portal permission flow plus full-screen marquee, crosshair and source-pixel dimensions | Fixed-dimension entry, multi-region capture |
 | Capture delay | 0–30 seconds before portal picker | Capture presets and time-lapse |
 | Scrolling windows | Guided vertical stitching with manual fixed overlap | Auto scroll, overlap detection, horizontal panorama |
 | Recording | MP4 screen/window/region; MP3 audio-only | Real Ubuntu acceptance, pause/resume, webcam overlay |
 | Sound | Mic/default input OR system output | Mixing, meters, noise reduction |
 | Annotations | Arrows, pen, shapes, text, numbered steps, highlight | Callouts, stamps, themes, editable objects |
-| Attention/privacy | Spotlight, pixelation, opaque redaction | Smart detection/redaction and magnifier |
-| Image editing | Crop, proportional resize, rotate, undo/redo | Borders, cut-out, background removal, smart object movement |
+| Attention/privacy | Spotlight, pixelation, Gaussian blur, opaque redaction | Smart detection/redaction and magnifier |
+| Image editing | Crop, proportional resize, rotate, border/shadow frame, undo/redo | More edge styles, cut-out, background removal, smart object movement |
 | OCR | Tesseract extraction and clipboard copy | Language controls, editable replacement text |
 | Video editing | None | Trim, combine, GIF, extracted frames, narrated image videos |
 | Steps/guides | Manual numbered annotation | Automatic click recording and guide templates |
@@ -37,12 +37,12 @@ Reviewed TechSmith's [current changelog](https://www.techsmith.com/snagit/whats-
 
 Additional gaps include automatic click-to-guide recording and editable PowerPoint slide export, Camtasia Online collaboration, recording duration limits, simultaneous microphone/system audio with meters, and noise reduction. SnagForge currently has no cloud integration, and no such service is required to use the alpha.
 
-The current capture path selects a rectangle on a captured preview, not a live screen overlay. Scrolling is manual vertical stitching with fixed overlap, not automatic scrolling or automatic alignment. Editor annotations are flattened into image pixels, not movable objects. Local OCR extracts text without replacing it in the image. These distinctions must remain explicit in release notes.
+The current marquee is a full-screen overlay rendered from a portal-approved frame. It looks and behaves like desktop selection without bypassing Wayland security, but it is not an unrestricted transparent view through to the live desktop. Scrolling is manual vertical stitching with fixed overlap, not automatic scrolling or automatic alignment. Editor annotations are flattened into image pixels, not movable objects. Local OCR extracts text without replacing it in the image. These distinctions must remain explicit in release notes.
 
 ## Workflow reference
 
 The user also requested similar workflows to those described on [SnagitPro](https://snagitpro.com/), an independent educational resource rather than the official Snagit product site. The feature baseline remains TechSmith's official documentation. Relevant targets include scrolling capture, screenshot annotation and stamps, redaction, OCR, screen recording, visual SOP creation, multi-monitor selection, and accessible screenshot descriptions. This section records requested scope; it does not mark those capabilities complete.
 
-## Delivered in 0.2
+## Delivered in 0.2.1
 
-Angular desktop interface, native WebChannel bridge, filename search for recent exports, pinned reference windows, and local annotate/copy/save-copy workflows. These are independent of automatic scrolling, advanced video editing, automatic step recording and AI features, which remain unimplemented.
+Angular desktop interface, native WebChannel bridge, filename search for recent exports, pinned reference windows, local annotate/copy/save-copy workflows, full-screen portal-safe marquee, Gaussian blur, and a border/shadow frame effect. Automatic scrolling, advanced video editing, automatic step recording, smart redaction and AI features remain unimplemented.

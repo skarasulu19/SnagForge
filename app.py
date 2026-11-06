@@ -9,7 +9,7 @@ from pathlib import Path
 from datetime import datetime
 from PIL import Image
 from PySide6.QtCore import Qt, QTimer, QUrl
-from PySide6.QtGui import QAction, QColor, QDesktopServices, QImage, QTransform
+from PySide6.QtGui import QAction, QColor, QDesktopServices, QImage, QPainter, QTransform
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QComboBox, QSpinBox, QCheckBox, QToolBar, QColorDialog,
     QFileDialog, QMessageBox, QDialog, QDialogButtonBox, QInputDialog, QListWidget,
@@ -123,7 +123,7 @@ class Window(QMainWindow):
         side.addSpacing(14)
         privacy=QLabel('●  Local by default');privacy.setStyleSheet('color:#73c5ac;font-size:11px;padding:10px 0;');side.addWidget(privacy)
         side.addWidget(action_button('  Help & user manual','help',self.manual,'sideQuiet','#8292ae'))
-        foot=QHBoxLayout();version=QLabel('v0.2.0');version.setObjectName('sideSub');foot.addWidget(version)
+        foot=QHBoxLayout();version=QLabel('v0.2.1');version.setObjectName('sideSub');foot.addWidget(version)
         alpha=QLabel('ALPHA');alpha.setObjectName('alpha');foot.addWidget(alpha);foot.addStretch();side.addLayout(foot)
 
         workspace=QWidget();shell.addWidget(workspace,1)
@@ -142,7 +142,7 @@ class Window(QMainWindow):
         self.image_title=QLabel('Untitled capture');self.image_title.setObjectName('filename');ih.addWidget(self.image_title);ih.addStretch()
         chip=QLabel('LOCAL WORKSPACE');chip.setObjectName('chip');ih.addWidget(chip);cardlayout.addWidget(imagehead)
         toolbar=QFrame();toolbar.setObjectName('toolbar');tools=QHBoxLayout(toolbar);tools.setContentsMargins(10,4,10,10);tools.setSpacing(3)
-        self.tool=QComboBox();names=['Arrow','Pen','Line','Rectangle','Ellipse','Text','Step','Highlight','Pixelate','Redact','Spotlight','Crop'];self.tool.addItems(names);self.tool.hide()
+        self.tool=QComboBox();names=['Arrow','Pen','Line','Rectangle','Ellipse','Text','Step','Highlight','Pixelate','Blur','Redact','Spotlight','Crop'];self.tool.addItems(names);self.tool.hide()
         self.tool_group=QButtonGroup(self);self.tool_buttons={}
         for name in names:
             control=QToolButton();control.setIcon(icon(name));control.setCheckable(True)
@@ -175,7 +175,7 @@ class Window(QMainWindow):
         self.stroke=QSpinBox();self.stroke.setRange(1,30);self.stroke.setValue(5);self.stroke.setSuffix(' px')
         props.addWidget(field('STROKE / TEXT SIZE',self.stroke));props.addSpacing(16)
         label=QLabel('Quick actions');label.setObjectName('sectionTitle');props.addWidget(label)
-        for text,name,fn in [('Copy image','copy',self.copy),('Pin reference','pin',self.pin_image),('Rotate 90°','rotate',self.rotate),('Resize image','resize',self.resize_image),('Extract text','ocr',self.ocr)]:
+        for text,name,fn in [('Copy image','copy',self.copy),('Pin reference','pin',self.pin_image),('Rotate 90°','rotate',self.rotate),('Resize image','resize',self.resize_image),('Border & shadow','frame',self.add_frame),('Extract text','ocr',self.ocr)]:
             control=action_button(text,name,fn,'quiet');control.setStyleSheet('text-align:left;');props.addWidget(control)
         props.addStretch()
         tips=QLabel('GOOD TO KNOW\n\nDrag on the image to annotate.\nCtrl+Z brings you back.');tips.setWordWrap(True);tips.setStyleSheet('color:#9aa5b5;font-size:10px;line-height:1.5;');props.addWidget(tips)
@@ -254,6 +254,16 @@ class Window(QMainWindow):
         if self.canvas.image.isNull():return
         width,ok=QInputDialog.getInt(self,'Resize image','New width (aspect ratio is preserved):',self.canvas.image.width(),1,20000)
         if ok:self.canvas.commit(self.canvas.image.scaledToWidth(width,Qt.TransformationMode.SmoothTransformation))
+    def add_frame(self):
+        if self.canvas.image.isNull():return
+        source=self.canvas.image;margin=32
+        result=QImage(source.width()+margin*2,source.height()+margin*2,QImage.Format.Format_ARGB32)
+        result.fill(QColor('#eef1f7'));painter=QPainter(result)
+        painter.setPen(Qt.PenStyle.NoPen);painter.setBrush(QColor(21,31,49,55))
+        painter.drawRoundedRect(margin+8,margin+8,source.width(),source.height(),8,8)
+        painter.drawImage(margin,margin,source);painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.setPen(QColor('#d8deea'));painter.drawRect(margin,margin,source.width()-1,source.height()-1)
+        painter.end();self.canvas.commit(result)
     def save(self):
         if self.canvas.image.isNull():return False
         CAPTURES.mkdir(parents=True,exist_ok=True)

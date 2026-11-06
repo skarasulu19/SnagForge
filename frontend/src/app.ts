@@ -42,7 +42,7 @@ export class AppComponent implements AfterViewInit {
   width=signal(0);height=signal(0);notice=signal('');recording=signal(false);busy=signal(false);elapsed=signal('00:00');
   mode=signal('MP4 video');audio=signal('Microphone');region=signal(true);delay=signal(0);format=signal('png');
   workflow=signal(localStorage.getItem('snagforge.workflow')||'editor');recent=signal<Recent[]>([]);query=signal('');
-  tools=['Arrow','Pen','Rectangle','Ellipse','Line','Text','Step','Highlight','Pixelate','Redact','Spotlight','Crop'];
+  tools=['Arrow','Pen','Rectangle','Ellipse','Line','Text','Step','Highlight','Pixelate','Blur','Redact','Spotlight','Crop'];
   colors=['#7764f2','#ff795e','#38b693','#f3b845','#24334b'];history:string[]=[];future:string[]=[];
   historySize=signal(0);futureSize=signal(0);zoom=signal(100);demo=signal(false);textOpen=signal(false);textValue='';resizeOpen=signal(false);resizeValue=1200;
   bridge?:Bridge;drawing=false;points:Point[]=[];backup?:ImageData;before='';step=1;timer?:ReturnType<typeof setTimeout>;
@@ -115,6 +115,7 @@ export class AppComponent implements AfterViewInit {
     else if(t==='Redact'){c.fillStyle='#111827';c.fillRect(r.x,r.y,r.w,r.h);}
     else if(t==='Spotlight'&&r.w&&r.h){const part=c.getImageData(r.x,r.y,r.w,r.h);c.fillStyle='rgba(7,15,30,.62)';c.fillRect(0,0,this.canvas.width,this.canvas.height);c.putImageData(part,r.x,r.y);}
     else if(t==='Pixelate'&&r.w&&r.h){const small=document.createElement('canvas');small.width=Math.max(1,Math.ceil(r.w/14));small.height=Math.max(1,Math.ceil(r.h/14));small.getContext('2d')!.drawImage(this.canvas,r.x,r.y,r.w,r.h,0,0,small.width,small.height);c.imageSmoothingEnabled=false;c.drawImage(small,0,0,small.width,small.height,r.x,r.y,r.w,r.h);}
+    else if(t==='Blur'&&r.w&&r.h){const part=document.createElement('canvas');part.width=r.w;part.height=r.h;part.getContext('2d')!.drawImage(this.canvas,r.x,r.y,r.w,r.h,0,0,r.w,r.h);c.beginPath();c.rect(r.x,r.y,r.w,r.h);c.clip();c.filter='blur('+Math.max(3,this.stroke())+'px)';c.drawImage(part,r.x,r.y);}
     else if(t==='Crop'){c.setLineDash([8,5]);c.strokeStyle='#7764f2';c.strokeRect(r.x,r.y,r.w,r.h);}
     c.restore();
   }
@@ -122,6 +123,11 @@ export class AppComponent implements AfterViewInit {
   rotate(){if(!this.hasImage())return;const before=this.canvas.toDataURL(),copy=document.createElement('canvas');copy.width=this.canvas.height;copy.height=this.canvas.width;const c=copy.getContext('2d')!;c.translate(copy.width,0);c.rotate(Math.PI/2);c.drawImage(this.canvas,0,0);this.load(copy.toDataURL());this.checkpoint(before);}
   resize(){if(!this.hasImage())return;this.resizeValue=this.width();this.resizeOpen.set(true);}
   applyResize(){const width=Math.floor(this.resizeValue),height=Math.round(width*this.height()/this.width());if(width<1||height<1||width*height>100_000_000){this.toast('Choose a valid size below 100 megapixels.');return;}const before=this.canvas.toDataURL(),copy=document.createElement('canvas');copy.width=width;copy.height=height;copy.getContext('2d')!.drawImage(this.canvas,0,0,width,height);this.load(copy.toDataURL());this.checkpoint(before);this.resizeOpen.set(false);}
+  addFrame(){
+    if(!this.hasImage())return;const before=this.canvas.toDataURL(),margin=32,copy=document.createElement('canvas');copy.width=this.canvas.width+margin*2;copy.height=this.canvas.height+margin*2;
+    const c=copy.getContext('2d')!;c.fillStyle='#eef1f7';c.fillRect(0,0,copy.width,copy.height);c.save();c.shadowColor='rgba(21,31,49,.28)';c.shadowBlur=18;c.shadowOffsetX=8;c.shadowOffsetY=8;c.drawImage(this.canvas,margin,margin);c.restore();c.strokeStyle='#d8deea';c.strokeRect(margin+.5,margin+.5,this.canvas.width-1,this.canvas.height-1);
+    this.load(copy.toDataURL());this.checkpoint(before);
+  }
   exportImage(){
     if(!this.hasImage())return;const mime='image/'+(this.format()==='jpg'?'jpeg':this.format());const data=this.canvas.toDataURL(mime,.95);
     if(this.bridge){this.bridge.saveImage(data,this.format(),saved=>{if(saved)this.dirty.set(false);});return;}else{const link=document.createElement('a');link.download='snagforge-capture.'+this.format();link.href=data;link.click();this.toast('Image exported.');}this.dirty.set(false);

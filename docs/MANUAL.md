@@ -1,6 +1,6 @@
 # SnagForge user manual
 
-**0.2.0 alpha · Angular desktop interface · Ubuntu 26.x target**
+**0.2.1 alpha · Angular desktop interface · Ubuntu 26.x target**
 
 SnagForge is an independent, open-source capture studio inspired by screenshot editing and automation workflows. The Angular interface runs locally in a Qt desktop window and communicates with a native Python capture engine. No web server or cloud account is required for desktop use.
 
@@ -37,10 +37,10 @@ The status at the top says **Desktop connected** when the Angular interface is c
 
 1. Click **New capture** or press **Ctrl+N**.
 2. Approve the system screenshot picker and select the source it offers.
-3. A captured preview opens. Drag a rectangle or choose **Full source**.
+3. A full-screen marquee opens over the portal-approved frame. Drag the exact rectangle you want; its pixel dimensions appear beside it. Press **Enter** for the full source or **Esc** to cancel.
 4. The resulting image opens in the Angular editor.
 
-This alpha selects regions on a captured preview. It does not provide its own transparent live screen-selection overlay. The system picker may offer selection independently. Cancel any picker to exit without replacing the image.
+Wayland does not let applications read the desktop freely. SnagForge therefore builds the desktop-style overlay from the frame approved by GNOME's portal instead of bypassing the permission model. The overlay is full-screen and visually matches the selected source, but it is not an unrestricted transparent view through to the desktop. Cancel any picker or press **Esc** to exit without replacing the image.
 
 Configure a 0, 3, 5, 10 or 30 second screenshot delay in **Workflows**. A delay is useful for opening a menu before capture.
 
@@ -59,13 +59,14 @@ Choose a tool in the toolbar, then drag directly on the image:
 | Step | Add sequential numbered markers |
 | Highlight | Add a translucent yellow emphasis |
 | Pixelate | Obscure visual detail; unsuitable for protecting secrets |
+| Blur | Apply a Gaussian blur to distracting details; use Redact for secrets |
 | Redact | Replace selected pixels with an opaque dark rectangle |
 | Spotlight | Dim everything outside the chosen area |
 | Crop | Keep the selected rectangle |
 
 Use **Tool properties** for color and stroke/text size. Use **Undo** / **Redo** or **Ctrl+Z** / **Ctrl+Shift+Z**. History retains up to 20 image snapshots in memory. Annotations are raster edits, not movable vector objects, and history is not saved with exports.
 
-**Rotate 90°** rotates clockwise. **Resize image** asks for a new pixel width and preserves the aspect ratio. The minus/plus controls adjust the view; they do not resize exported pixels.
+**Rotate 90°** rotates clockwise. **Resize image** asks for a new pixel width and preserves the aspect ratio. **Border & shadow** places the image on a light frame with a subtle shadow. The minus/plus controls adjust the view; they do not resize exported pixels.
 
 **Explore with an example** loads synthetic demonstration content. It is an optional example, not a captured desktop.
 
@@ -93,7 +94,7 @@ By default files are saved under `~/Pictures/SnagForge`. The library only scans 
 4. For video, enable **Select a region** if you want cropping.
 5. Optionally set a delay and click **Start recording**.
 6. Choose the output file. For video, approve the desktop screen/window picker.
-7. If region selection is enabled, choose a rectangle on a preview from that source.
+7. If region selection is enabled, drag a rectangle on the full-screen source overlay. The displayed dimensions map to source pixels.
 8. Restore SnagForge and click **Stop & save**. Wait for the file to finalize, then verify playback.
 
 Current video encoding uses software x264 / H.264, MP4 and 30 fps. Audio in MP4 uses AAC; audio-only export uses MP3. Hardware encoding, 60 fps, webcam overlays, pause/resume, audio meters, simultaneous microphone/system mixing, noise reduction and built-in video trimming are not implemented.
