@@ -87,12 +87,12 @@ The patch fixes a GNOME portal cleanup race that could escape `QThread.run()` af
 
 ## Record video or audio
 
-1. Choose **MP4 video** or **MP3 audio**.
-2. Choose **None**, **Microphone**, or **System audio**. MP3 requires an audio source.
-3. For video, enable **Select region** if you want a crop.
-4. Click **Record**, choose a file and approve the desktop screen/window picker.
-5. If selecting a region, drag a rectangle on the full-screen overlay. Press **Enter** for the full source or **Esc** to cancel.
-6. The app minimizes while recording. Restore it from the desktop and press **Stop & save**. Wait for the file to finalize.
+1. Open **Screen recorder**. The top action now follows this page; **Take screenshot** on the editor is a separate action.
+2. Choose **MP4 video** or **MP3 audio**, then an audio source. MP3 requires audio.
+3. For video, choose **Selected area** or **Full screen/window**, then click **Select area & record** or **Record full source**. The top button starts the same recording workflow.
+4. Approve a monitor or window in Ubuntu's screen-sharing permission picker. This is different from Ubuntu's screenshot dialog; you do not switch that screenshot dialog into video mode.
+5. For selected-area recording, drag on SnagForge's preview and release to lock the box. Click **Record selected area**, or press Enter to confirm the selected rectangle.
+6. Click **Stop & save** in the recording controller or tray menu. Wait for finalization. Exports are saved in `~/Pictures/SnagForge` and listed in Capture library.
 
 There is currently no webcam, pause/resume or simultaneous microphone/system mixing. Restoring the app can appear in a full-monitor recording. Record a separate window to avoid that, or trim externally afterward. Audio-only uses the selected/default source without a screen picker.
 

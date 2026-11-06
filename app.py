@@ -164,7 +164,7 @@ class Window(QMainWindow):
         top=QHBoxLayout();titles=QVBoxLayout();titles.setSpacing(5)
         title=QLabel('Capture studio');title.setObjectName('title');titles.addWidget(title)
         subtitle=QLabel('A little clarity goes a long way.');subtitle.setObjectName('subtitle');titles.addWidget(subtitle);top.addLayout(titles);top.addStretch()
-        self.capture_btn=action_button('New capture','capture',self.capture,'primary','#ffffff');top.addWidget(self.capture_btn)
+        self.capture_btn=action_button('Take screenshot','capture',self.capture,'primary','#ffffff');top.addWidget(self.capture_btn)
         top.addWidget(action_button('Export image','export',self.save,'export','#ffffff'));layout.addLayout(top)
 
         editorrow=QHBoxLayout();editorrow.setSpacing(16);layout.addLayout(editorrow,1)
