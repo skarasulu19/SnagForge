@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
     QSplitter, QAbstractItemView, QFrame, QToolButton, QButtonGroup, QGridLayout)
 from editor import Canvas, RegionDialog
 from workers import CaptureWorker, Recorder
-from media import stitch
+from media import stitch, recording_crop
 from ui import STYLE, icon, action_button, caption, field, ReferenceWindow
 
 CAPTURES=Path.home()/'Pictures'/'SnagForge'
@@ -195,19 +195,21 @@ class Window(QMainWindow):
         self.mode=QComboBox();self.mode.addItems(['MP4 video','MP3 audio']);self.mode.setMinimumWidth(130);controls.addWidget(field('FORMAT',self.mode),1)
         self.audio=QComboBox();self.audio.addItems(['None','Microphone','System audio']);self.audio.setMinimumWidth(140);controls.addWidget(field('AUDIO SOURCE',self.audio),1)
         self.delay=QSpinBox();self.delay.setRange(0,30);self.delay.setSuffix(' sec');controls.addWidget(field('START DELAY',self.delay))
-        self.region=QCheckBox('Select region');self.region.setChecked(True);controls.addWidget(self.region)
-        self.record_btn=action_button('Record','record',self.record,'primary','#ffffff');controls.addWidget(self.record_btn)
+        self.region=QCheckBox('Marquee desktop area');self.region.setChecked(True);controls.addWidget(self.region)
+        self.record_btn=action_button('Select area & record','record',self.record,'primary','#ffffff');controls.addWidget(self.record_btn)
         self.stop_btn=action_button('Stop & save','stop',self.stop);self.stop_btn.setEnabled(False);controls.addWidget(self.stop_btn)
         rl.addLayout(controls);layout.addWidget(recordcard)
         bottom=QHBoxLayout();bottom.setSpacing(8)
         bottom.addWidget(action_button('Open image','image',self.open_image,'quiet'));bottom.addWidget(action_button('Paste image','paste',self.paste,'quiet'));bottom.addStretch()
         notice=QLabel('Ubuntu / Wayland  ·  Desktop recording validation pending');notice.setObjectName('canvasInfo');bottom.addWidget(notice);layout.addLayout(bottom)
         self.tool.currentTextChanged.connect(self.select_tool)
+        self.region.toggled.connect(self.update_record_action)
+        self.mode.currentTextChanged.connect(self.update_record_action)
         self.stroke.valueChanged.connect(lambda n:setattr(self.canvas,'stroke_width',n))
         self.canvas.changed.connect(self.changed);self.set_color(QColor('#7561ee'))
         self.statusBar().showMessage('Ready to capture something worth explaining.')
         self.timer=QTimer(self);self.timer.timeout.connect(self.tick);self.timer.start(1000)
-        for key,fn in [('Ctrl+O',self.open_image),('Ctrl+S',self.save),('Ctrl+C',self.copy),('Ctrl+V',self.paste),('Ctrl+Z',self.canvas.undo),('Ctrl+Shift+Z',self.canvas.redo),('Ctrl+N',self.capture)]:
+        for key,fn in [('Ctrl+O',self.open_image),('Ctrl+S',self.save),('Ctrl+C',self.copy),('Ctrl+V',self.paste),('Ctrl+Z',self.canvas.undo),('Ctrl+Shift+Z',self.canvas.redo),('Ctrl+N',self.capture),('Ctrl+Shift+R',self.record_area)]:
             action=QAction(self);action.setShortcut(key);action.triggered.connect(fn);self.addAction(action)
         self.refresh_recent()
 
@@ -216,7 +218,13 @@ class Window(QMainWindow):
     def set_color(self,color):
         self.canvas.color=color;self.color_btn.setText(color.name().upper())
     def focus_recording(self):
-        self.mode.setFocus();self.statusBar().showMessage('Choose a format and audio source, then press Record.')
+        self.mode.setFocus();self.statusBar().showMessage('Choose Select area & record, approve a source, then drag a desktop marquee.')
+    def update_record_action(self,*_):
+        video=self.mode.currentText()=='MP4 video'
+        self.region.setEnabled(video and not self.busy)
+        self.record_btn.setText('Select area & record' if video and self.region.isChecked() else 'Record full source' if video else 'Start audio recording')
+    def record_area(self):
+        self.mode.setCurrentText('MP4 video');self.region.setChecked(True);self.record()
     def pin_image(self):
         if self.canvas.image.isNull():return
         pin=ReferenceWindow(self.canvas.image,self);self.pins.append(pin)
@@ -320,7 +328,8 @@ class Window(QMainWindow):
         self.recorder.error.connect(self.error)
         self.recorder.finished.connect(self.recording_finished)
         self.busy=True;self.record_btn.setEnabled(False);self.capture_btn.setEnabled(False);self.stop_btn.setEnabled(True)
-        self.statusBar().showMessage('Preparing capture · approve the desktop picker, then select a region')
+        self.update_record_action()
+        self.statusBar().showMessage('Preparing capture · approve the desktop picker, then drag a marquee over the area to record')
         self.showMinimized()
         QTimer.singleShot(max(450,self.delay.value()*1000),self.recorder.start)
     def video_region(self,path):
@@ -331,10 +340,8 @@ class Window(QMainWindow):
         chooser=RegionDialog(image,self)
         if chooser.exec():
             rect=chooser.region or image.rect()
-            # Even width/height for H.264 4:2:0. Preserve selected origin.
-            width=rect.width()//2*2;height=rect.height()//2*2
-            if width<2 or height<2:self.recorder.cancelled=True
-            else:self.recorder.crop=(rect.x(),rect.y(),image.width()-rect.x()-width,image.height()-rect.y()-height)
+            try:self.recorder.crop=recording_crop(image.width(),image.height(),(rect.x(),rect.y(),rect.width(),rect.height()))
+            except ValueError:self.recorder.cancelled=True
         else:self.recorder.cancelled=True
         self.recorder.selection_ready.set()
         if not self.recorder.cancelled:self.showMinimized()
@@ -354,7 +361,7 @@ class Window(QMainWindow):
     def recording_finished(self):
         self.recording_since=None;self.record_badge.setText('READY');self.busy=False;self.record_btn.setEnabled(True)
         self.capture_btn.setEnabled(True);self.stop_btn.setEnabled(False);self.showNormal();self.raise_()
-        self.statusBar().showMessage('Ready · Recording finished or cancelled')
+        self.update_record_action();self.statusBar().showMessage('Ready · Recording finished or cancelled')
     def refresh_recent(self):
         self.recent.clear()
         if CAPTURES.exists():

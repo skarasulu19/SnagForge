@@ -2,6 +2,16 @@
 import subprocess
 from PIL import Image, ImageChops, ImageStat
 
+def recording_crop(source_width,source_height,rect):
+    """Convert a selected rectangle to even-sized GStreamer crop margins."""
+    left,top,width,height=rect
+    left=max(0,min(int(left),source_width-1));top=max(0,min(int(top),source_height-1))
+    width=min(int(width),source_width-left)//2*2
+    height=min(int(height),source_height-top)//2*2
+    if width<2 or height<2:
+        raise ValueError('The recording area must be at least 2 × 2 pixels.')
+    return left,top,source_width-left-width,source_height-top-height
+
 def gst_string(value):
     return '"' + str(value).replace('\\', '\\\\').replace('"', '\\"') + '"'
 

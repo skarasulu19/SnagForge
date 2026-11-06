@@ -43,6 +43,10 @@ The current marquee is a full-screen overlay rendered from a portal-approved fra
 
 The user also requested similar workflows to those described on [SnagitPro](https://snagitpro.com/), an independent educational resource rather than the official Snagit product site. The feature baseline remains TechSmith's official documentation. Relevant targets include scrolling capture, screenshot annotation and stamps, redaction, OCR, screen recording, visual SOP creation, multi-monitor selection, and accessible screenshot descriptions. This section records requested scope; it does not mark those capabilities complete.
 
+## Delivered in 0.2.2
+
+A dedicated selected-area video workflow now opens an always-on-top, full-screen marquee after Wayland portal approval. The crop is normalized to even dimensions before H.264 encoding, and the native interface provides Ctrl+Shift+R.
+
 ## Delivered in 0.2.1
 
 Angular desktop interface, native WebChannel bridge, filename search for recent exports, pinned reference windows, local annotate/copy/save-copy workflows, full-screen portal-safe marquee, Gaussian blur, and a border/shadow frame effect. Automatic scrolling, advanced video editing, automatic step recording, smart redaction and AI features remain unimplemented.

@@ -11,7 +11,7 @@ from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QApplication
 from PySide6.QtTest import QTest
 from editor import Canvas, RegionDialog, RegionSelector
-from media import pipeline, stitch
+from media import pipeline, recording_crop, stitch
 from portal import Portal, Cancelled
 from dbus_next import Message, MessageType, Variant
 
@@ -82,6 +82,9 @@ class MediaTests(unittest.TestCase):
         self.assertIn('location="/tmp/space name;$(bad).mp4"',args)
         with self.assertRaises(ValueError):pipeline('/tmp/x.mp3','MP3 audio')
         self.assertIn('lamemp3enc',pipeline('/tmp/x.mp3','MP3 audio',audio='Microphone'))
+    def test_recording_marquee_maps_to_even_crop_margins(self):
+        self.assertEqual(recording_crop(1920,1080,(101,53,801,601)),(101,53,1019,427))
+        with self.assertRaises(ValueError):recording_crop(1920,1080,(10,10,1,1))
 
 class FakeBus:
     unique_name=':1.23'

@@ -277,7 +277,7 @@ class RegionDialog(QDialog):
     def __init__(self,image,parent=None):
         super().__init__(parent)
         self.setWindowTitle('SnagForge · Select desktop region')
-        self.setWindowFlags(Qt.WindowType.Dialog|Qt.WindowType.FramelessWindowHint)
+        self.setWindowFlags(Qt.WindowType.Dialog|Qt.WindowType.FramelessWindowHint|Qt.WindowType.WindowStaysOnTopHint)
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
         self.setWindowState(self.windowState()|Qt.WindowState.WindowFullScreen)
         self.region=None

@@ -35,5 +35,14 @@ class BridgeTests(unittest.TestCase):
         self.assertTrue(LocalPage.acceptNavigationRequest(None,allowed,None,True))
         for url in ('https://example.com','file:///tmp/untrusted.html','data:text/html,hello'):
             self.assertFalse(LocalPage.acceptNavigationRequest(None,QUrl(url),None,True))
+    def test_native_recorder_exposes_marquee_action(self):
+        engine=EngineWindow()
+        self.assertEqual(engine.record_btn.text(),'Select area & record')
+        engine.region.setChecked(False)
+        self.assertEqual(engine.record_btn.text(),'Record full source')
+        engine.mode.setCurrentText('MP3 audio')
+        self.assertEqual(engine.record_btn.text(),'Start audio recording')
+        self.assertFalse(engine.region.isEnabled())
+        engine.timer.stop();engine.close()
 
 if __name__=='__main__':unittest.main()

@@ -137,6 +137,8 @@ export class AppComponent implements AfterViewInit {
   pin(){if(!this.hasImage())return;if(this.bridge)this.bridge.pinImage(this.canvas.toDataURL());else this.toast('Pinned reference windows are available in the desktop app.');}
   ocr(){if(!this.hasImage())return;if(this.bridge)this.bridge.recognizeText(this.canvas.toDataURL());else this.toast('Local OCR is available in the desktop app.');}
   record(){if(!this.bridge){this.toast('Launch the desktop application for real screen and audio recording.');return;}this.bridge.record(JSON.stringify({mode:this.mode(),audio:this.audio(),region:this.region(),delay:this.delay()}));}
+  recordArea(){this.mode.set('MP4 video');this.region.set(true);this.record();}
+  recordFullSource(){this.mode.set('MP4 video');this.region.set(false);this.record();}
   stop(){this.bridge?.stop();}
   setWorkflow(value:string){this.workflow.set(value);localStorage.setItem('snagforge.workflow',value);}
   filteredRecent(){const q=this.query().toLowerCase();return this.recent().filter(r=>r.name.toLowerCase().includes(q));}

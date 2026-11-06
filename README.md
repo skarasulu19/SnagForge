@@ -4,7 +4,7 @@
 
 An independent, GPL-3.0-licensed screenshot and recording workbench built for Ubuntu desktops. Inspired by common screen capture workflows; not affiliated with TechSmith and not compatible with Snagit project files.
 
-**Version 0.2.1-alpha · Target: Ubuntu 26.x GNOME / Wayland · Python 3.10+ · Angular 22**
+**Version 0.2.2-alpha · Target: Ubuntu 26.x GNOME / Wayland · Python 3.10+ · Angular 22**
 
 > This is an early source release, not full Snagit feature parity. Editor, stitching, selection mapping and portal protocol behavior have automated tests. Live capture, audio and encoding still require validation on a real Ubuntu 26 desktop. There are no fabricated recording screenshots or claimed live recording results.
 
@@ -24,6 +24,10 @@ The first command installs Ubuntu packages with `sudo`, creates a project-local 
 
 Install dependencies only on the Ubuntu computer where you want to run the app. Do not run the GUI as root. No Docker, web server or account is needed to use it.
 
+## What changed in 0.2.2
+
+Region video is now a first-class workflow: **Select area & record** opens the Ubuntu permission picker and then a full-screen, always-on-top crosshair marquee. Only the selected source rectangle is encoded, with even-dimension normalization for H.264. The native interface also exposes **Ctrl+Shift+R** for this action.
+
 ## What changed in 0.2.1
 
 A new offline Angular desktop interface provides a focused image editor, recording setup, searchable recent-export library and local after-capture workflows. The native Python / PipeWire / GStreamer engine handles desktop operations through Qt WebChannel. Node.js is needed only to rebuild the interface; the prebuilt UI is included.
@@ -36,7 +40,7 @@ The patch fixes a GNOME portal cleanup race that could escape `QThread.run()` af
 |---|---|
 | Screenshots | Desktop portal permission flow, then a full-screen marquee overlay; drag a region, press Enter for full source, or Esc to cancel |
 | Screen/window recording | MP4, H.264 video, 30 fps, desktop portal + PipeWire + GStreamer; desktop validation pending |
-| Region video | Select with the same full-screen marquee over a portal-approved frame; cropped before encoding |
+| Region video | Dedicated **Select area & record** action with a full-screen crosshair marquee over the portal-approved desktop frame; cropped before encoding |
 | Audio | Choose microphone/default input OR default system output; AAC in MP4, MP3 audio-only |
 | Scrolling capture | Guided captures/imports, fixed manual overlap, optional header/footer trim; vertical only |
 | Annotation | Arrow, line, pen, rectangle, ellipse, text, numbered steps, highlight |
@@ -125,4 +129,4 @@ This repository uses GPL-3.0, as selected when the repository was created. The o
 
 ## Checks
 
-Sixteen Python tests pass. The actual Angular desktop window was exercised with synthetic images: startup, native bridge synchronization, rectangle annotation, native clipboard copy, undo/redo, and three rendered UI screenshots. Live Ubuntu 26 screen/audio recording remains unverified. See [validation](docs/VALIDATION.md) and the [Snagit + ShareX hybrid roadmap](docs/HYBRID_ROADMAP.md).
+Eighteen Python tests pass. The actual Angular desktop window was exercised with synthetic images: startup, native bridge synchronization, rectangle annotation, native clipboard copy, undo/redo, and three rendered UI screenshots. Live Ubuntu 26 screen/audio recording remains unverified. See [validation](docs/VALIDATION.md) and the [Snagit + ShareX hybrid roadmap](docs/HYBRID_ROADMAP.md).
