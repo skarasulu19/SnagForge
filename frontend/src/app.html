@@ -3,7 +3,7 @@
     <div class="brand"><span class="brand-mark"><sf-icon name="capture"/></span><div><strong>SnagForge<span class="brand-dot">.</span></strong><small>YOUR CAPTURE WORKSPACE</small></div></div>
     <div class="side-caption">WORKSPACE</div>
     <nav aria-label="Workspace">
-      <button [class.active]="page()==='editor'" (click)="page.set('editor')"><sf-icon name="image"/>Image editor<span class="nav-key">⌘</span></button>
+      <button [class.active]="page()==='editor'" (click)="page.set('editor')"><sf-icon name="image"/>Image editor</button>
       <button [class.active]="page()==='recorder'" (click)="page.set('recorder')"><sf-icon name="video"/>Screen recorder</button>
       <button (click)="scrolling()" [disabled]="busy()"><sf-icon name="scroll"/>Scrolling capture</button>
       <button [class.active]="page()==='library'" (click)="page.set('library');refresh()"><sf-icon name="grid"/>Capture library<span class="count">{{recent().length}}</span></button>
