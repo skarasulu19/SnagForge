@@ -14,5 +14,20 @@ jobs:
       - run: python -m unittest discover -s tests -v
         env:
           QT_QPA_PLATFORM: offscreen
-      - run: python -m compileall -q app.py editor.py portal.py workers.py media.py
+      - run: python -m compileall -q app.py editor.py portal.py workers.py media.py ui.py web_shell.py
       - run: bash -n install.sh run.sh publish.sh
+
+  angular:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+      - run: git diff --exit-code -- frontend/dist
