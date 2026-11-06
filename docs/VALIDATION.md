@@ -3,7 +3,7 @@
 ## Executed in the development environment
 
 - Python 3.12 and PySide6 6.12; Linux headless Qt offscreen platform.
-- Eight passing automated tests cover image annotation/crop/history, coordinate mapping, opaque redaction, stitch pixel continuity, invalid stitch input, pipeline/audio/crop arguments, early portal responses and portal cancellation.
+- Twelve passing automated tests cover image annotation/crop/history, coordinate mapping, opaque redaction, stitch pixel continuity, invalid stitch input, pipeline/audio/crop arguments, early portal responses, portal cancellation, image bridge validation, bridge echo suppression and navigation confinement.
 - Rendered and visually inspected actual editor/selection/scrolling/recording-setup widgets with synthetic sample data.
 - Python compilation and shell syntax checks.
 
@@ -30,3 +30,9 @@ There is no GNOME/Wayland desktop capture session in the development runtime. GS
 - [ ] Confirm closing protects an unsaved image and never destroys a running capture worker.
 
 Record machine/session versions and outcomes before marking this release desktop-validated.
+
+## Angular 0.2 desktop integration check
+
+Angular 22 AOT compilation and library linking pass. `docs/render_angular.py` launched the real offline Qt WebEngine desktop window and verified native bridge connection, loading a synthetic image into the native engine, a pointer-driven rectangle annotation, native clipboard copy, and undo/redo state. It rendered the editor, idle recording setup and workflows. This is a scoped application check, not a real GNOME/Wayland recording test.
+
+The environment emitted expected offscreen GPU/D-Bus/udev warnings. These do not establish that native desktop capture, sound routing or video encoding work.

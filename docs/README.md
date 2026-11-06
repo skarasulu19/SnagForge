@@ -5,3 +5,4 @@
 - [Feature comparison and roadmap](FEATURES.md)
 - [Desktop validation checklist](VALIDATION.md)
 - [Screenshot provenance](screenshots/README.md)
+- [Snagit + ShareX hybrid roadmap](HYBRID_ROADMAP.md)

@@ -2,7 +2,7 @@
 
 The comparison reference is [TechSmith's Snagit features page](https://www.techsmith.com/snagit/features/), reviewed 6 November 2026. This document groups capabilities rather than promising full parity. No TechSmith source code, assets, templates or branding are included.
 
-| Workflow | SnagForge 0.1 alpha | Remaining work |
+| Workflow | SnagForge 0.2 alpha | Remaining work |
 |---|---|---|
 | Screenshot capture | Portal picker and rectangle selection on returned preview | Live desktop overlay, presets, multi-region capture |
 | Capture delay | 0–30 seconds before portal picker | Capture presets and time-lapse |
@@ -15,9 +15,9 @@ The comparison reference is [TechSmith's Snagit features page](https://www.techs
 | OCR | Tesseract extraction and clipboard copy | Language controls, editable replacement text |
 | Video editing | None | Trim, combine, GIF, extracted frames, narrated image videos |
 | Steps/guides | Manual numbered annotation | Automatic click recording and guide templates |
-| Organization | Recent default-folder exports | Tags, search, collections, persistent metadata |
+| Organization | Searchable recent default-folder exports | Tags, search, collections, persistent metadata |
 | File formats | PNG, JPEG, WebP, MP4, MP3 | PDF export, editable project format, batch processing |
-| Sharing | Local files and clipboard | Optional user-controlled share integrations |
+| Sharing | Local files, clipboard, and three local after-capture presets | Optional user-controlled share integrations |
 | Shortcuts | Focused-app shortcuts; OS launcher shortcut documented | Dedicated global capture/stop shortcuts |
 | Collaboration / AI | None | Separate design work; no cloud service implied |
 
@@ -42,3 +42,7 @@ The current capture path selects a rectangle on a captured preview, not a live s
 ## Workflow reference
 
 The user also requested similar workflows to those described on [SnagitPro](https://snagitpro.com/), an independent educational resource rather than the official Snagit product site. The feature baseline remains TechSmith's official documentation. Relevant targets include scrolling capture, screenshot annotation and stamps, redaction, OCR, screen recording, visual SOP creation, multi-monitor selection, and accessible screenshot descriptions. This section records requested scope; it does not mark those capabilities complete.
+
+## Delivered in 0.2
+
+Angular desktop interface, native WebChannel bridge, filename search for recent exports, pinned reference windows, and local annotate/copy/save-copy workflows. These are independent of automatic scrolling, advanced video editing, automatic step recording and AI features, which remain unimplemented.
