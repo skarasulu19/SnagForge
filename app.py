@@ -259,7 +259,23 @@ class Window(QMainWindow):
         return getattr(self,'shell',None) or self
 
     def error(self,message):
-        QMessageBox.warning(self.dialog_host(),'SnagForge',message)
+        host=self.dialog_host()
+        if host.isMinimized():
+            host.setWindowState(host.windowState() & ~Qt.WindowState.WindowMinimized)
+        host.show();host.raise_();host.activateWindow()
+        box=QMessageBox(QMessageBox.Icon.Warning,'SnagForge',str(message),
+                        QMessageBox.StandardButton.Ok,host)
+        box.setWindowModality(Qt.WindowModality.ApplicationModal)
+        box.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint,True)
+        box.setDefaultButton(QMessageBox.StandardButton.Ok)
+        def foreground():
+            # Activate after exec() has mapped the dialog's native surface.
+            box.raise_();box.activateWindow()
+            if box.windowHandle():box.windowHandle().requestActivate()
+            box.button(QMessageBox.StandardButton.Ok).setFocus()
+        QTimer.singleShot(0,foreground)
+        try:box.exec()
+        finally:box.deleteLater()
     def changed(self):
         self.dirty=True
         im=self.canvas.image
