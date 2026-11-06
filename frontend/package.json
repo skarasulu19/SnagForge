@@ -1,0 +1,25 @@
+{
+  "name": "snagforge-desktop-ui",
+  "version": "0.2.0-alpha",
+  "private": true,
+  "scripts": {
+    "build": "ngc -p tsconfig.json && node build.mjs",
+    "check": "ngc -p tsconfig.json --noEmit",
+    "preview": "python3 -m http.server 4200 --directory dist --bind 127.0.0.1"
+  },
+  "dependencies": {
+    "@angular/common": "22.2.4",
+    "@angular/compiler": "22.2.4",
+    "@angular/core": "22.2.4",
+    "@angular/forms": "22.2.4",
+    "@angular/platform-browser": "22.2.4",
+    "rxjs": "~7.8.2",
+    "tslib": "^2.8.1"
+  },
+  "devDependencies": {
+    "@angular/compiler-cli": "22.2.4",
+    "typescript": "~6.0.0",
+    "esbuild": "^0.25.0",
+    "@babel/core": "8.0.1"
+  }
+}
