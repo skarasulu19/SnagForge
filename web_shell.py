@@ -188,8 +188,10 @@ class DesktopWindow(QMainWindow):
         for pin in list(self.engine.pins):pin.close()
         event.accept()
 
-def run():
+def run(guard=None):
     configure_application_identity()
     app=QApplication.instance() or QApplication([])
     window=DesktopWindow();window.show()
+    if guard:guard.set_window(window)
     return app.exec()
+

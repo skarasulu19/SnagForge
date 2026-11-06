@@ -18,6 +18,7 @@ from editor import Canvas, RegionDialog
 from workers import CaptureWorker, Recorder
 from media import stitch, recording_crop
 from ui import STYLE, icon, action_button, caption, field, ReferenceWindow
+from instance import InstanceGuard
 
 CAPTURES=Path.home()/'Pictures'/'SnagForge'
 
@@ -356,21 +357,35 @@ class Window(QMainWindow):
         self.busy=True;self.record_btn.setEnabled(False);self.capture_btn.setEnabled(False);self.stop_btn.setEnabled(True)
         self.update_record_action()
         self.statusBar().showMessage('Preparing capture · approve the desktop picker, then drag a marquee over the area to record')
-        self.showMinimized()
+        # Keep the app's existing surface available while the portal picker
+        # opens. Restoring a minimized app later can lose activation on Wayland.
+        if mode=='MP3 audio' or not self.region.isChecked():self.showMinimized()
         QTimer.singleShot(max(450,self.delay.value()*1000),self.recorder.start)
     def video_region(self,path):
-        self.showNormal();self.raise_()
         image=QImage(path)
         if image.isNull():
             self.recorder.cancelled=True;self.recorder.selection_ready.set();return
-        chooser=RegionDialog(image,self.dialog_host(),'Record selected area')
-        if chooser.exec():
-            rect=chooser.region or image.rect()
-            try:self.recorder.crop=recording_crop(image.width(),image.height(),(rect.x(),rect.y(),rect.width(),rect.height()))
-            except ValueError:self.recorder.cancelled=True
-        else:self.recorder.cancelled=True
-        self.recorder.selection_ready.set()
-        if not self.recorder.cancelled:self.showMinimized()
+        host=self.dialog_host();previous=host.takeCentralWidget()
+        previous.hide();previous.setParent(None)
+        state=host.windowState();geometry=host.saveGeometry()
+        chooser=RegionDialog(image,host,'Record selected area',embedded=True)
+        self.region_chooser=chooser
+        def finished(result):
+            try:
+                if result==QDialog.DialogCode.Accepted:
+                    rect=chooser.region or image.rect()
+                    try:self.recorder.crop=recording_crop(image.width(),image.height(),(rect.x(),rect.y(),rect.width(),rect.height()))
+                    except ValueError:self.recorder.cancelled=True
+                else:self.recorder.cancelled=True
+            finally:
+                host.takeCentralWidget();chooser.hide();chooser.deleteLater()
+                host.setCentralWidget(previous);previous.show()
+                host.restoreGeometry(geometry);host.setWindowState(state)
+                self.region_chooser=None;self.recorder.selection_ready.set()
+                if not self.recorder.cancelled:self.showMinimized()
+        chooser.finished.connect(finished)
+        host.setCentralWidget(chooser);host.showFullScreen()
+        chooser.show();chooser.selector.setFocus(Qt.FocusReason.OtherFocusReason)
     def recording_started(self):
         self.recording_since=time.monotonic();self.record_badge.setText('RECORDING')
         self.record_controller=RecordingController(self.stop);self.record_controller.show();self.record_controller.raise_();self.tick()
@@ -433,13 +448,17 @@ def main():
     # This must happen before QApplication is constructed. Registering a new
     # desktop ID after Qt has already contacted the host portal is rejected.
     configure_application_identity()
+    app=QApplication.instance() or QApplication(sys.argv)
+    guard=InstanceGuard(app)
+    if not guard.primary:return 0
     if '--native' not in sys.argv and (Path(__file__).parent/'frontend'/'dist'/'index.html').is_file():
         from web_shell import run
-        return run()
-    app=QApplication(sys.argv)
+        return run(guard)
     app.setStyle('Fusion');app.setStyleSheet(STYLE)
     window=Window();window.show()
+    guard.set_window(window)
     if len(sys.argv)>1 and Path(sys.argv[1]).is_file():window.load_image(QImage(sys.argv[1]))
     return app.exec()
 
 if __name__=='__main__':sys.exit(main())
+

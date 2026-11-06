@@ -315,14 +315,17 @@ class RegionSelector(QWidget):
         else:super().keyPressEvent(event)
 
 class RegionDialog(QDialog):
-    def __init__(self,image,parent=None,confirm_text='Use selected area'):
+    def __init__(self,image,parent=None,confirm_text='Use selected area',embedded=False):
         super().__init__(parent)
         self.setWindowTitle('SnagForge · Select desktop region')
         # Keep the selector with its owning app rather than adding another
         # task-switcher entry while the user is trying to choose an area.
-        self.setWindowFlags(Qt.WindowType.Tool|Qt.WindowType.FramelessWindowHint|Qt.WindowType.WindowStaysOnTopHint)
-        self.setWindowModality(Qt.WindowModality.ApplicationModal)
-        self.setWindowState(self.windowState()|Qt.WindowState.WindowFullScreen)
+        if embedded:
+            self.setParent(parent,Qt.WindowType.Widget)
+        else:
+            self.setWindowFlags(Qt.WindowType.Tool|Qt.WindowType.FramelessWindowHint|Qt.WindowType.WindowStaysOnTopHint)
+            self.setWindowModality(Qt.WindowModality.ApplicationModal)
+            self.setWindowState(self.windowState()|Qt.WindowState.WindowFullScreen)
         self.region=None
         layout=QVBoxLayout(self);layout.setContentsMargins(0,0,0,0);layout.setSpacing(0)
         self.selector=RegionSelector(image,self);self.canvas=self.selector
@@ -343,8 +346,9 @@ class RegionDialog(QDialog):
         layout.addLayout(actions)
     def showEvent(self,event):
         super().showEvent(event)
-        self.raise_();self.activateWindow()
-        if self.windowHandle():self.windowHandle().requestActivate()
+        self.raise_()
+        host=self.window();host.activateWindow()
+        if host.windowHandle():host.windowHandle().requestActivate()
         self.selector.setFocus(Qt.FocusReason.ActiveWindowFocusReason)
     def begin_selection(self):
         self.region=None;self.confirm_button.setEnabled(False)
