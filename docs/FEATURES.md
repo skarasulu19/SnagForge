@@ -2,15 +2,15 @@
 
 The comparison reference is [TechSmith's Snagit features page](https://www.techsmith.com/snagit/features/), reviewed 6 November 2026. This document groups capabilities rather than promising full parity. No TechSmith source code, assets, templates or branding are included.
 
-| Workflow | SnagForge 0.2 alpha | Remaining work |
+| Workflow | SnagForge 0.3 alpha | Remaining work |
 |---|---|---|
 | Screenshot capture | Portal permission flow plus full-screen marquee, crosshair and source-pixel dimensions | Fixed-dimension entry, multi-region capture |
 | Capture delay | 0–30 seconds before portal picker | Capture presets and time-lapse |
 | Scrolling windows | Guided vertical stitching with manual fixed overlap | Auto scroll, overlap detection, horizontal panorama |
 | Recording | MP4 screen/window/region; MP3 audio-only | Real Ubuntu acceptance, pause/resume, webcam overlay |
 | Sound | Mic/default input OR system output | Mixing, meters, noise reduction |
-| Annotations | Arrows, pen, shapes, text, numbered steps, highlight | Callouts, stamps, themes, editable objects |
-| Attention/privacy | Spotlight, pixelation, Gaussian blur, opaque redaction | Smart detection/redaction and magnifier |
+| Annotations | Arrows, pen, shapes, text, callouts, numbered steps, approval stamps, highlight, capture info | More stamp packs, themes, editable objects |
+| Attention/privacy | Spotlight, pixelation, Gaussian blur, opaque redaction, magnifier | Smart detection/redaction |
 | Image editing | Crop, proportional resize, rotate, border/shadow frame, undo/redo | More edge styles, cut-out, background removal, smart object movement |
 | OCR | Tesseract extraction and clipboard copy | Language controls, editable replacement text |
 | Video editing | None | Trim, combine, GIF, extracted frames, narrated image videos |
@@ -42,6 +42,10 @@ The current marquee is a full-screen overlay rendered from a portal-approved fra
 ## Workflow reference
 
 The user also requested similar workflows to those described on [SnagitPro](https://snagitpro.com/), an independent educational resource rather than the official Snagit product site. The feature baseline remains TechSmith's official documentation. Relevant targets include scrolling capture, screenshot annotation and stamps, redaction, OCR, screen recording, visual SOP creation, multi-monitor selection, and accessible screenshot descriptions. This section records requested scope; it does not mark those capabilities complete.
+
+## Delivered in 0.3.0
+
+Callout, approval stamp, magnify and capture-information tools are available in both editors. They use the current annotation color and size, flatten into the image and participate in undo/redo history.
 
 ## Delivered in 0.2.2
 

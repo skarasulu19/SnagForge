@@ -1,5 +1,7 @@
 import io
 import math
+import platform
+from datetime import datetime
 from PIL import Image as PillowImage, ImageFilter
 from PySide6.QtCore import Qt, QPointF, QRect, QRectF, Signal, QBuffer, QIODevice
 from PySide6.QtGui import QColor, QImage, QPainter, QPen, QPolygonF, QFont
@@ -83,7 +85,7 @@ class Canvas(QWidget):
         p.drawImage(r,self.image)
         if self.dragging:
             preview=self.image.copy()
-            if self.tool in ('Crop','Select','Pixelate','Blur','Redact','Spotlight'):
+            if self.tool in ('Crop','Select','Pixelate','Blur','Redact','Spotlight','Magnify'):
                 p.setPen(QPen(QColor('#59d5ca'),2,Qt.PenStyle.DashLine))
                 a,b=self.points[0],self.points[-1]
                 factor=r.width()/self.image.width()
@@ -138,7 +140,7 @@ class Canvas(QWidget):
                 self.commit(result)
         else:
             text=None
-            if self.tool=='Text':
+            if self.tool in ('Text','Callout'):
                 text,ok=QInputDialog.getMultiLineText(self,'Text annotation','Text:')
                 if not ok or not text:
                     self.update()
@@ -169,6 +171,30 @@ class Canvas(QWidget):
         elif self.tool=='Rectangle': p.drawRect(rect)
         elif self.tool=='Ellipse': p.drawEllipse(rect)
         elif self.tool=='Highlight': p.fillRect(rect,QColor(255,221,60,100))
+        elif self.tool=='Callout' and text:
+            box=rect if rect.width()>80 and rect.height()>45 else QRectF(a.x(),a.y(),260,100)
+            p.setPen(QPen(self.color,max(2,self.stroke_width//2)));p.setBrush(self.color)
+            p.drawRoundedRect(box,14,14)
+            tail=QPolygonF([QPointF(box.left()+30,box.bottom()),QPointF(box.left()+50,box.bottom()),QPointF(box.left()+28,box.bottom()+24)])
+            p.drawPolygon(tail);p.setPen(Qt.GlobalColor.white)
+            f=QFont('Sans');f.setPixelSize(max(17,self.stroke_width*4));f.setBold(True);p.setFont(f)
+            p.drawText(box.adjusted(16,10,-16,-10),Qt.AlignmentFlag.AlignCenter|Qt.TextFlag.TextWordWrap,text)
+        elif self.tool=='Stamp':
+            radius=max(22,self.stroke_width*5);p.setBrush(self.color);p.setPen(Qt.PenStyle.NoPen);p.drawEllipse(a,radius,radius)
+            p.setPen(QPen(Qt.GlobalColor.white,max(4,radius//7),Qt.PenStyle.SolidLine,Qt.PenCapStyle.RoundCap,Qt.PenJoinStyle.RoundJoin))
+            p.drawLine(QPointF(a.x()-radius*.45,a.y()),QPointF(a.x()-radius*.1,a.y()+radius*.35))
+            p.drawLine(QPointF(a.x()-radius*.1,a.y()+radius*.35),QPointF(a.x()+radius*.5,a.y()-radius*.4))
+        elif self.tool=='Magnify' and rect.width()>3 and rect.height()>3:
+            inner=QRect(rect.center().x()-max(1,rect.width()//4),rect.center().y()-max(1,rect.height()//4),max(2,rect.width()//2),max(2,rect.height()//2)).intersected(self.image.rect())
+            enlarged=self.image.copy(inner).scaled(max(2,int(rect.width())),max(2,int(rect.height())),Qt.AspectRatioMode.IgnoreAspectRatio,Qt.TransformationMode.SmoothTransformation)
+            p.drawImage(rect,enlarged);p.setBrush(Qt.BrushStyle.NoBrush);p.setPen(QPen(self.color,max(3,self.stroke_width)));p.drawRoundedRect(rect,12,12)
+        elif self.tool=='Capture Info':
+            box=rect if rect.width()>220 and rect.height()>55 else QRectF(a.x(),a.y(),390,82)
+            box=box.intersected(QRectF(result.rect()))
+            p.setPen(Qt.PenStyle.NoPen);p.setBrush(QColor(16,24,39,225));p.drawRoundedRect(box,10,10)
+            p.setPen(Qt.GlobalColor.white);f=QFont('Sans');f.setPixelSize(max(14,self.stroke_width*3));f.setBold(True);p.setFont(f)
+            info=f'Ubuntu · {platform.release()}   •   {datetime.now():%Y-%m-%d %H:%M}\n{result.width()} × {result.height()} px   •   SnagForge'
+            p.drawText(box.adjusted(14,9,-14,-9),Qt.AlignmentFlag.AlignVCenter|Qt.TextFlag.TextWordWrap,info)
         elif self.tool=='Step':
             radius=max(18,self.stroke_width*4)
             p.setBrush(self.color)

@@ -3,6 +3,7 @@ import os
 os.environ.setdefault('QT_QPA_PLATFORM','offscreen')
 import sys
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from PIL import Image
@@ -23,12 +24,17 @@ class EditorTests(unittest.TestCase):
         im=QImage(400,300,QImage.Format.Format_ARGB32);im.fill(Qt.GlobalColor.white);self.canvas.load(im)
         app.processEvents()
     def test_annotations_crop_and_history(self):
-        for tool in ['Arrow','Pen','Rectangle','Ellipse','Highlight','Step','Redact','Pixelate','Blur','Spotlight']:
+        for tool in ['Arrow','Pen','Rectangle','Ellipse','Highlight','Step','Stamp','Redact','Pixelate','Blur','Spotlight','Magnify','Capture Info']:
             self.canvas.tool=tool
             QTest.mousePress(self.canvas,Qt.MouseButton.LeftButton,pos=self.canvas.rect().center())
             QTest.mouseMove(self.canvas,self.canvas.rect().center()+__import__('PySide6.QtCore',fromlist=['QPoint']).QPoint(90,70))
             QTest.mouseRelease(self.canvas,Qt.MouseButton.LeftButton,pos=self.canvas.rect().center()+__import__('PySide6.QtCore',fromlist=['QPoint']).QPoint(90,70))
             self.assertTrue(self.canvas.history,tool)
+        self.canvas.tool='Callout'
+        with patch('editor.QInputDialog.getMultiLineText',return_value=('Review this',True)):
+            QTest.mousePress(self.canvas,Qt.MouseButton.LeftButton,pos=self.canvas.rect().center())
+            QTest.mouseRelease(self.canvas,Qt.MouseButton.LeftButton,pos=self.canvas.rect().center()+QPoint(100,65))
+        self.assertTrue(self.canvas.history)
         before=self.canvas.image.copy();self.canvas.undo();self.canvas.redo();self.assertEqual(before,self.canvas.image)
         self.canvas.tool='Crop'
         QTest.mousePress(self.canvas,Qt.MouseButton.LeftButton,pos=self.canvas.rect().center())

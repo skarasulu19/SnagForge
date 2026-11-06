@@ -42,7 +42,7 @@ export class AppComponent implements AfterViewInit {
   width=signal(0);height=signal(0);notice=signal('');recording=signal(false);busy=signal(false);elapsed=signal('00:00');
   mode=signal('MP4 video');audio=signal('Microphone');region=signal(true);delay=signal(0);format=signal('png');
   workflow=signal(localStorage.getItem('snagforge.workflow')||'editor');recent=signal<Recent[]>([]);query=signal('');
-  tools=['Arrow','Pen','Rectangle','Ellipse','Line','Text','Step','Highlight','Pixelate','Blur','Redact','Spotlight','Crop'];
+  tools=['Arrow','Pen','Rectangle','Ellipse','Line','Text','Callout','Step','Stamp','Highlight','Pixelate','Blur','Redact','Spotlight','Magnify','Capture Info','Crop'];
   colors=['#7764f2','#ff795e','#38b693','#f3b845','#24334b'];history:string[]=[];future:string[]=[];
   historySize=signal(0);futureSize=signal(0);zoom=signal(100);demo=signal(false);textOpen=signal(false);textValue='';resizeOpen=signal(false);resizeValue=1200;
   bridge?:Bridge;drawing=false;points:Point[]=[];backup?:ImageData;before='';step=1;timer?:ReturnType<typeof setTimeout>;
@@ -89,7 +89,7 @@ export class AppComponent implements AfterViewInit {
   pointerDown(event:PointerEvent){
     if(!this.hasImage()||event.button!==0)return;event.preventDefault();this.canvas.setPointerCapture(event.pointerId);
     this.points=[this.point(event)];this.before=this.canvas.toDataURL();
-    if(this.tool()==='Text'){this.textValue='';this.textOpen.set(true);return;}
+    if(this.tool()==='Text'||this.tool()==='Callout'){this.textValue='';this.textOpen.set(true);return;}
     this.backup=this.context.getImageData(0,0,this.canvas.width,this.canvas.height);this.drawing=true;
   }
   pointerMove(event:PointerEvent){if(!this.drawing)return;this.points.push(this.point(event));this.context.putImageData(this.backup!,0,0);this.paint();}
@@ -111,15 +111,18 @@ export class AppComponent implements AfterViewInit {
     else if(t==='Rectangle')c.strokeRect(r.x,r.y,r.w,r.h);
     else if(t==='Ellipse'){c.beginPath();c.ellipse(r.x+r.w/2,r.y+r.h/2,r.w/2,r.h/2,0,0,Math.PI*2);c.stroke();}
     else if(t==='Highlight'){c.globalAlpha=.32;c.fillStyle='#ffce45';c.fillRect(r.x,r.y,r.w,r.h);}
+    else if(t==='Stamp'){const radius=Math.max(22,this.stroke()*5);c.beginPath();c.arc(a.x,a.y,radius,0,Math.PI*2);c.fill();c.strokeStyle='#fff';c.lineWidth=Math.max(4,radius/7);c.beginPath();c.moveTo(a.x-radius*.45,a.y);c.lineTo(a.x-radius*.1,a.y+radius*.35);c.lineTo(a.x+radius*.5,a.y-radius*.4);c.stroke();}
     else if(t==='Step'){const radius=Math.max(18,this.stroke()*4);c.beginPath();c.arc(a.x,a.y,radius,0,Math.PI*2);c.fill();c.fillStyle='#fff';c.font='bold '+radius+'px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(String(this.step),a.x,a.y);}
     else if(t==='Redact'){c.fillStyle='#111827';c.fillRect(r.x,r.y,r.w,r.h);}
     else if(t==='Spotlight'&&r.w&&r.h){const part=c.getImageData(r.x,r.y,r.w,r.h);c.fillStyle='rgba(7,15,30,.62)';c.fillRect(0,0,this.canvas.width,this.canvas.height);c.putImageData(part,r.x,r.y);}
     else if(t==='Pixelate'&&r.w&&r.h){const small=document.createElement('canvas');small.width=Math.max(1,Math.ceil(r.w/14));small.height=Math.max(1,Math.ceil(r.h/14));small.getContext('2d')!.drawImage(this.canvas,r.x,r.y,r.w,r.h,0,0,small.width,small.height);c.imageSmoothingEnabled=false;c.drawImage(small,0,0,small.width,small.height,r.x,r.y,r.w,r.h);}
     else if(t==='Blur'&&r.w&&r.h){const part=document.createElement('canvas');part.width=r.w;part.height=r.h;part.getContext('2d')!.drawImage(this.canvas,r.x,r.y,r.w,r.h,0,0,r.w,r.h);c.beginPath();c.rect(r.x,r.y,r.w,r.h);c.clip();c.filter='blur('+Math.max(3,this.stroke())+'px)';c.drawImage(part,r.x,r.y);}
+    else if(t==='Magnify'&&r.w>3&&r.h>3){const sx=r.x+r.w*.25,sy=r.y+r.h*.25;c.drawImage(this.canvas,sx,sy,r.w*.5,r.h*.5,r.x,r.y,r.w,r.h);c.strokeStyle=this.color();c.lineWidth=Math.max(3,this.stroke());c.strokeRect(r.x,r.y,r.w,r.h);}
+    else if(t==='Capture Info'){const w=Math.min(this.canvas.width,Math.max(300,r.w)),h=Math.min(this.canvas.height,Math.max(74,r.h)),x=Math.max(0,Math.min(r.x,this.canvas.width-w)),y=Math.max(0,Math.min(r.y,this.canvas.height-h)),date=new Date().toLocaleString();c.fillStyle='rgba(16,24,39,.9)';c.beginPath();c.roundRect(x,y,w,h,10);c.fill();c.fillStyle='#fff';c.font='bold '+Math.max(14,this.stroke()*3)+'px sans-serif';c.fillText('Ubuntu  •  '+date,x+14,y+28);c.font=Math.max(12,this.stroke()*2.5)+'px sans-serif';c.fillText(this.canvas.width+' × '+this.canvas.height+' px  •  SnagForge',x+14,y+54);}
     else if(t==='Crop'){c.setLineDash([8,5]);c.strokeStyle='#7764f2';c.strokeRect(r.x,r.y,r.w,r.h);}
     c.restore();
   }
-  applyText(){if(this.textValue.trim()){const c=this.context;c.fillStyle=this.color();c.font=Math.max(20,this.stroke()*5)+'px sans-serif';this.textValue.split('\n').forEach((line,i)=>c.fillText(line,this.points[0].x,this.points[0].y+i*Math.max(25,this.stroke()*6)));this.checkpoint(this.before);}this.textOpen.set(false);}
+  applyText(){if(this.textValue.trim()){const c=this.context,a=this.points[0];if(this.tool()==='Callout'){const w=Math.min(320,this.canvas.width),h=Math.min(120,this.canvas.height),x=Math.max(0,Math.min(a.x,this.canvas.width-w)),y=Math.max(0,Math.min(a.y,this.canvas.height-h-24));c.fillStyle=this.color();c.beginPath();c.roundRect(x,y,w,h,14);c.fill();c.beginPath();c.moveTo(x+30,y+h);c.lineTo(x+54,y+h);c.lineTo(x+28,y+h+Math.min(24,this.canvas.height-y-h));c.closePath();c.fill();c.fillStyle='#fff';c.font='bold '+Math.max(17,this.stroke()*4)+'px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(this.textValue.trim(),x+w/2,y+h/2,w-28);}else{c.fillStyle=this.color();c.font=Math.max(20,this.stroke()*5)+'px sans-serif';this.textValue.split('\n').forEach((line,i)=>c.fillText(line,a.x,a.y+i*Math.max(25,this.stroke()*6)));}this.checkpoint(this.before);}this.textOpen.set(false);}
   rotate(){if(!this.hasImage())return;const before=this.canvas.toDataURL(),copy=document.createElement('canvas');copy.width=this.canvas.height;copy.height=this.canvas.width;const c=copy.getContext('2d')!;c.translate(copy.width,0);c.rotate(Math.PI/2);c.drawImage(this.canvas,0,0);this.load(copy.toDataURL());this.checkpoint(before);}
   resize(){if(!this.hasImage())return;this.resizeValue=this.width();this.resizeOpen.set(true);}
   applyResize(){const width=Math.floor(this.resizeValue),height=Math.round(width*this.height()/this.width());if(width<1||height<1||width*height>100_000_000){this.toast('Choose a valid size below 100 megapixels.');return;}const before=this.canvas.toDataURL(),copy=document.createElement('canvas');copy.width=width;copy.height=height;copy.getContext('2d')!.drawImage(this.canvas,0,0,width,height);this.load(copy.toDataURL());this.checkpoint(before);this.resizeOpen.set(false);}

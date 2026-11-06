@@ -1,6 +1,6 @@
 # SnagForge user manual
 
-**0.2.2 alpha · Angular desktop interface · Ubuntu 26.x target**
+**0.3.0 alpha · Angular desktop interface · Ubuntu 26.x target**
 
 SnagForge is an independent, open-source capture studio inspired by screenshot editing and automation workflows. The Angular interface runs locally in a Qt desktop window and communicates with a native Python capture engine. No web server or cloud account is required for desktop use.
 
@@ -56,12 +56,16 @@ Choose a tool in the toolbar, then drag directly on the image:
 | Pen | Draw freehand |
 | Rectangle / ellipse | Outline an area |
 | Text | Click the location, enter text and choose Add text |
+| Callout | Add a colored speech bubble with centered text |
 | Step | Add sequential numbered markers |
+| Stamp | Add a colored approval check mark |
 | Highlight | Add a translucent yellow emphasis |
 | Pixelate | Obscure visual detail; unsuitable for protecting secrets |
 | Blur | Apply a Gaussian blur to distracting details; use Redact for secrets |
 | Redact | Replace selected pixels with an opaque dark rectangle |
 | Spotlight | Dim everything outside the chosen area |
+| Magnify | Enlarge the center of a selected detail and add a colored border |
+| Capture Info | Add Ubuntu, date/time, image dimensions and SnagForge information |
 | Crop | Keep the selected rectangle |
 
 Use **Tool properties** for color and stroke/text size. Use **Undo** / **Redo** or **Ctrl+Z** / **Ctrl+Shift+Z**. History retains up to 20 image snapshots in memory. Annotations are raster edits, not movable vector objects, and history is not saved with exports.

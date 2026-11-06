@@ -4,7 +4,7 @@
 
 An independent, GPL-3.0-licensed screenshot and recording workbench built for Ubuntu desktops. Inspired by common screen capture workflows; not affiliated with TechSmith and not compatible with Snagit project files.
 
-**Version 0.2.2-alpha · Target: Ubuntu 26.x GNOME / Wayland · Python 3.10+ · Angular 22**
+**Version 0.3.0-alpha · Target: Ubuntu 26.x GNOME / Wayland · Python 3.10+ · Angular 22**
 
 > This is an early source release, not full Snagit feature parity. Editor, stitching, selection mapping and portal protocol behavior have automated tests. Live capture, audio and encoding still require validation on a real Ubuntu 26 desktop. There are no fabricated recording screenshots or claimed live recording results.
 
@@ -23,6 +23,10 @@ chmod +x install.sh run.sh publish.sh
 The first command installs Ubuntu packages with `sudo`, creates a project-local virtual environment, downloads Python dependencies from PyPI and adds an application menu entry. Run it as your normal desktop user. If dependencies are already installed, use `./install.sh`.
 
 Install dependencies only on the Ubuntu computer where you want to run the app. Do not run the GUI as root. No Docker, web server or account is needed to use it.
+
+## What changed in 0.3.0
+
+The professional annotation toolkit adds callout bubbles, approval stamps, magnified detail regions, and capture-information cards containing the Ubuntu kernel, date/time, image dimensions and SnagForge attribution. All four tools work in both the Angular and native editors and participate in undo/redo history.
 
 ## What changed in 0.2.2
 
@@ -43,8 +47,8 @@ The patch fixes a GNOME portal cleanup race that could escape `QThread.run()` af
 | Region video | Dedicated **Select area & record** action with a full-screen crosshair marquee over the portal-approved desktop frame; cropped before encoding |
 | Audio | Choose microphone/default input OR default system output; AAC in MP4, MP3 audio-only |
 | Scrolling capture | Guided captures/imports, fixed manual overlap, optional header/footer trim; vertical only |
-| Annotation | Arrow, line, pen, rectangle, ellipse, text, numbered steps, highlight |
-| Image editing | Crop, proportional resize, rotate, pixelate, Gaussian blur, opaque redact, spotlight, border/shadow frame |
+| Annotation | Arrow, line, pen, rectangle, ellipse, text, callouts, numbered steps, approval stamps, highlight and capture-info cards |
+| Image editing | Crop, proportional resize, rotate, pixelate, Gaussian blur, opaque redact, spotlight, magnify, border/shadow frame |
 | History | Undo/redo up to 20 raster snapshots in memory |
 | Export | Flattened PNG, JPEG, WebP; image clipboard copy and paste |
 | OCR | Local Tesseract text extraction, review/copy; no in-place text editing |

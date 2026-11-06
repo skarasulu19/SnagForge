@@ -148,7 +148,7 @@ class Window(QMainWindow):
         self.image_title=QLabel('Untitled capture');self.image_title.setObjectName('filename');ih.addWidget(self.image_title);ih.addStretch()
         chip=QLabel('LOCAL WORKSPACE');chip.setObjectName('chip');ih.addWidget(chip);cardlayout.addWidget(imagehead)
         toolbar=QFrame();toolbar.setObjectName('toolbar');tools=QHBoxLayout(toolbar);tools.setContentsMargins(10,4,10,10);tools.setSpacing(3)
-        self.tool=QComboBox();names=['Arrow','Pen','Line','Rectangle','Ellipse','Text','Step','Highlight','Pixelate','Blur','Redact','Spotlight','Crop'];self.tool.addItems(names);self.tool.hide()
+        self.tool=QComboBox();names=['Arrow','Pen','Line','Rectangle','Ellipse','Text','Callout','Step','Stamp','Highlight','Pixelate','Blur','Redact','Spotlight','Magnify','Capture Info','Crop'];self.tool.addItems(names);self.tool.hide()
         self.tool_group=QButtonGroup(self);self.tool_buttons={}
         for name in names:
             control=QToolButton();control.setIcon(icon(name));control.setCheckable(True)
