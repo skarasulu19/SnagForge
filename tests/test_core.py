@@ -93,6 +93,7 @@ class MediaTests(unittest.TestCase):
         args=pipeline('/tmp/space name;$(bad).mp4','MP4 video',9,42,(10,20,30,40),'Microphone')
         self.assertIn('left=10',args);self.assertIn('bottom=40',args)
         self.assertIn('avenc_aac',args);self.assertIn('mp4mux',args)
+        self.assertIn('fragment-duration=1000',args);self.assertIn('key-int-max=30',args)
         self.assertIn('location="/tmp/space name;$(bad).mp4"',args)
         with self.assertRaises(ValueError):pipeline('/tmp/x.mp3','MP3 audio')
         self.assertIn('lamemp3enc',pipeline('/tmp/x.mp3','MP3 audio',audio='Microphone'))
@@ -101,9 +102,12 @@ class MediaTests(unittest.TestCase):
         with self.assertRaises(ValueError):recording_crop(1920,1080,(10,10,1,1))
     def test_user_stopped_finalized_recording_is_accepted(self):
         with tempfile.TemporaryDirectory() as folder:
-            path=Path(folder)/'capture.mp4';path.write_bytes(b'x'*256)
+            path=Path(folder)/'capture.mp4'
+            path.write_bytes(b'ftyp'+b'x'*128+b'moov'+b'x'*128+b'moof'+b'mdat')
             self.assertTrue(recording_output_ok(path,-2,'',True))
-            self.assertFalse(recording_output_ok(path,-2,'ERROR encoder failed',True))
+            self.assertTrue(recording_output_ok(path,-15,'ERROR source stopped',True))
+            broken=Path(folder)/'broken.mp4';broken.write_bytes(b'x'*512)
+            self.assertFalse(recording_output_ok(broken,-9,'',True))
 
 class FakeBus:
     unique_name=':1.23'

@@ -10,10 +10,57 @@ from PySide6.QtCore import QThread, Signal
 from portal import Portal, Cancelled
 from media import pipeline, gst_string
 
+FINALIZE_GRACE_SECONDS=8
+TERMINATE_GRACE_SECONDS=3
+
+def _mp4_has_playable_boxes(path):
+    """Check the MP4 initialization and media boxes without reading a huge file."""
+    target=Path(path)
+    size=target.stat().st_size
+    with target.open('rb') as stream:
+        head=stream.read(min(size,2*1024*1024))
+        tail=b''
+        if size>len(head):
+            stream.seek(max(0,size-2*1024*1024))
+            tail=stream.read()
+    sample=head+tail
+    return b'ftyp' in sample and b'moov' in sample and (b'moof' in sample or b'mdat' in sample)
+
 def recording_output_ok(path,returncode,details,stopped):
-    """A user-stopped gst-launch may report SIGINT despite a valid finalized file."""
-    valid_file=Path(path).is_file() and Path(path).stat().st_size>=128
-    return valid_file and 'ERROR' not in details and (not returncode or stopped)
+    """Accept playable user-stopped output even when gst-launch needed forcing down."""
+    target=Path(path)
+    if not target.is_file() or target.stat().st_size<128:
+        return False
+    if target.suffix.lower()=='.mp4' and not _mp4_has_playable_boxes(target):
+        return False
+    # SIGINT/SIGTERM are expected after Stop. Encoder errors remain fatal when
+    # the pipeline ended by itself, but must not discard playable fragments.
+    return stopped or (not returncode and 'ERROR' not in details)
+
+def _signal_group(process, sig):
+    """Signal the recorder's private process group, falling back to the child."""
+    try:
+        os.killpg(process.pid,sig)
+    except (AttributeError,ProcessLookupError):
+        try:
+            process.send_signal(sig)
+        except ProcessLookupError:
+            pass
+
+async def finalize_process(process):
+    """Request EOS, then bound shutdown without trapping the application UI."""
+    _signal_group(process,signal.SIGINT)  # gst-launch -e converts this to EOS.
+    try:
+        await asyncio.to_thread(process.wait,FINALIZE_GRACE_SECONDS)
+        return False
+    except subprocess.TimeoutExpired:
+        _signal_group(process,signal.SIGTERM)
+        try:
+            await asyncio.to_thread(process.wait,TERMINATE_GRACE_SECONDS)
+        except subprocess.TimeoutExpired:
+            _signal_group(process,signal.SIGKILL)
+            await asyncio.to_thread(process.wait)
+        return True
 
 class CaptureWorker(QThread):
     image = Signal(str)
@@ -108,7 +155,8 @@ class Recorder(QThread):
             cmd=pipeline(self.path,self.mode,fd,node,self.crop,self.audio)
             with tempfile.TemporaryFile() as log:
                 process=subprocess.Popen(cmd,pass_fds=(fd,) if fd is not None else (),
-                                         stdout=log,stderr=subprocess.STDOUT)
+                                         stdout=log,stderr=subprocess.STDOUT,
+                                         start_new_session=True)
                 # Catch immediate startup/plugin errors before showing Recording.
                 await asyncio.sleep(.7)
                 if process.poll() is None:
@@ -116,17 +164,14 @@ class Recorder(QThread):
                 while process.poll() is None and not self.stop_event.is_set():
                     await asyncio.sleep(.1)
                 stopped=self.stop_event.is_set()
+                forced_shutdown=False
                 if process.poll() is None:
-                    process.send_signal(signal.SIGINT)  # gst-launch -e writes EOS/trailer.
-                    try:
-                        await asyncio.to_thread(process.wait,20)
-                    except subprocess.TimeoutExpired:
-                        process.kill()
-                        await asyncio.to_thread(process.wait)
-                        raise RuntimeError('Encoder could not finalize in 20 seconds. The recording may be incomplete.')
+                    forced_shutdown=await finalize_process(process)
                 log.seek(0)
                 details=log.read().decode(errors='replace')[-3500:]
                 if not recording_output_ok(self.path,process.returncode,details,stopped):
+                    if forced_shutdown:
+                        raise RuntimeError('The encoder stopped responding and did not leave a playable recording.')
                     raise RuntimeError('Recording failed.\n'+details)
                 if not stopped:
                     raise RuntimeError('Capture ended unexpectedly; check the saved file before using it.\n'+details)

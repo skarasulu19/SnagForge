@@ -36,8 +36,11 @@ def pipeline(output, mode, fd=None, node=None, crop=None, audio='None', fps=30):
         cmd += ['!', 'videocrop', f'left={left}', f'top={top}', f'right={right}', f'bottom={bottom}']
     cmd += ['!', 'videorate', '!', f'video/x-raw,framerate={fps}/1',
             '!', 'videoscale', '!', 'video/x-raw,format=I420', '!', 'x264enc',
-            'tune=zerolatency', 'speed-preset=veryfast', '!', 'h264parse',
-            '!', 'queue', '!', 'mux.', 'mp4mux', 'name=mux', '!',
+            'tune=zerolatency', 'speed-preset=veryfast', f'key-int-max={fps}',
+            '!', 'h264parse', '!', 'queue', '!', 'mux.', 'mp4mux', 'name=mux',
+            # Write one-second MP4 fragments. A completed fragment remains
+            # playable even if a desktop driver stalls while stopping.
+            'fragment-duration=1000', '!',
             'filesink', 'location=' + gst_string(output)]
     if audio != 'None':
         cmd += audio_source(audio) + ['!', 'avenc_aac', '!', 'aacparse', '!', 'queue', '!', 'mux.']
